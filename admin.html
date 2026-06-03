@@ -1,0 +1,291 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BEAUMONT Admin Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Crimson+Text:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <section id="login-section" class="admin-login">
+        <div>
+          <p class="eyebrow">BEAUMONT ADMIN</p>
+          <h1>Catalogue Management</h1>
+          <p>Journal Management · Enquiries · Collection Requests</p>
+        </div>
+        <form id="login-form" class="admin-form">
+          <label for="username">Username</label>
+          <input id="username" type="text" autocomplete="username" required />
+
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required />
+
+          <button class="button button--primary" type="submit">Sign In</button>
+          <p data-status class="admin-status" role="status"></p>
+        </form>
+      </section>
+
+      <section id="admin-section" class="admin-dashboard hidden">
+        <header class="admin-dashboard__header">
+          <div>
+            <p class="eyebrow">BEAUMONT ADMIN</p>
+            <h1>Catalogue Management</h1>
+          </div>
+          <div class="admin-actions">
+            <a class="button button--secondary" href="index.html">View Site</a>
+            <button id="logout-btn" class="button button--ghost" type="button">Logout</button>
+          </div>
+        </header>
+
+        <nav class="admin-tabs" aria-label="Admin sections">
+          <button class="active" type="button" data-admin-tab="inventory">Inventory</button>
+          <button type="button" data-admin-tab="items">Add Object</button>
+          <button type="button" data-admin-tab="journal">Journal</button>
+          <button type="button" data-admin-tab="collections">Collections</button>
+          <button type="button" data-admin-tab="tags">Tags</button>
+          <button type="button" data-admin-tab="enquiries">Enquiries</button>
+          <button type="button" data-admin-tab="collection-requests">Collection Requests</button>
+          <button type="button" data-admin-tab="settings">Settings</button>
+        </nav>
+
+        <p data-status class="admin-status" role="status"></p>
+        <div id="admin-counts" class="admin-counts" aria-label="Dashboard counts"></div>
+
+        <section class="admin-panel" data-admin-panel="items">
+          <form id="item-form" class="admin-form admin-form--wide">
+            <input id="current-main-image" type="hidden" />
+            <input id="current-gallery-images" type="hidden" value="[]" />
+
+            <div class="form-row">
+              <label>
+                Title
+                <input id="title" type="text" required />
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label>
+                Category
+                <select id="category" required></select>
+              </label>
+              <label>
+                Sub-category
+                <input id="subcategory" type="text" placeholder="Regimental History, Trench Map, Archive" />
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label>
+                Date / Year
+                <input id="year" type="text" placeholder="1916 or c. 1890" />
+              </label>
+              <label>
+                Price
+                <input id="price" type="number" min="0" step="0.01" placeholder="Leave blank for price on request" />
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label>
+                Collection
+                <select id="collection-name"></select>
+              </label>
+              <label>
+                Acquisition Source
+                <select id="acquisition-source"></select>
+              </label>
+            </div>
+
+            <label>
+              Short Description
+              <textarea id="short-description" rows="3" required></textarea>
+            </label>
+
+            <label>
+              Full Description
+              <textarea id="full-description" rows="7"></textarea>
+            </label>
+
+            <div class="form-row">
+              <label>
+                Provenance
+                <textarea id="provenance" rows="4"></textarea>
+              </label>
+              <label>
+                Condition
+                <textarea id="condition" rows="4"></textarea>
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label class="toggle-line">
+                <input id="featured" type="checkbox" />
+                <span>Mark as featured object</span>
+              </label>
+              <label class="toggle-line">
+                <input id="sold" type="checkbox" />
+                <span>Mark as sold</span>
+              </label>
+              <label class="toggle-line">
+                <input id="archive-reference" type="checkbox" />
+                <span>Archive / hide from active stock</span>
+              </label>
+            </div>
+
+            <div class="admin-upload-grid">
+              <div class="admin-upload-control">
+                <label>
+                  Main Image
+                  <input id="main-image" type="file" accept="image/*" />
+                </label>
+                <label class="toggle-line toggle-line--compact">
+                  <input id="remove-main-image" type="checkbox" />
+                  <span>Remove current main image</span>
+                </label>
+              </div>
+              <div class="admin-upload-control">
+                <label>
+                  Additional Gallery Images
+                  <input id="gallery-images" type="file" accept="image/*" multiple />
+                </label>
+                <label class="toggle-line toggle-line--compact">
+                  <input id="replace-gallery-images" type="checkbox" />
+                  <span>Replace gallery with selected images</span>
+                </label>
+                <label class="toggle-line toggle-line--compact">
+                  <input id="clear-gallery-images" type="checkbox" />
+                  <span>Remove gallery images</span>
+                </label>
+              </div>
+            </div>
+
+            <fieldset class="tag-checklist-wrap">
+              <legend>Tags</legend>
+              <div id="tag-checklist" class="tag-checklist"></div>
+            </fieldset>
+
+            <div class="button-group">
+              <button class="button button--primary" type="submit"><span id="item-submit-label">Add Object</span></button>
+              <button id="cancel-edit" class="button button--secondary hidden" type="button">Cancel Edit</button>
+              <button class="button button--ghost" type="reset">Clear Form</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="inventory">
+          <div class="admin-panel__header">
+            <h2>Collection Manager</h2>
+            <input id="inventory-search" type="search" placeholder="Search collection" />
+          </div>
+          <div id="items-container" class="admin-list"></div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="sold">
+          <div class="admin-panel__header">
+            <h2>Sold Objects Manager</h2>
+            <p>Use the collection manager to edit or return sold objects to available status.</p>
+          </div>
+          <div id="sold-container" class="admin-list"></div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="tags">
+          <div class="tag-manager-grid">
+            <form id="tag-form" class="admin-form">
+              <h2>Tag Management</h2>
+              <label for="tag-name">Tag Name</label>
+              <input id="tag-name" type="text" placeholder="e.g. Polar Exploration" required />
+              <button class="button button--primary" type="submit"><span id="tag-submit-label">Add Tag</span></button>
+            </form>
+            <div id="tags-container" class="tag-list"></div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="collections">
+          <div class="tag-manager-grid">
+            <form id="collection-form" class="admin-form">
+              <h2>Collection Management</h2>
+              <label for="collection-name-admin">Collection Name</label>
+              <input id="collection-name-admin" type="text" placeholder="e.g. Western Front Collection" required />
+              <button class="button button--primary" type="submit">Save Collection</button>
+            </form>
+            <div id="collections-container" class="tag-list"></div>
+          </div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="journal">
+          <form id="article-form" class="admin-form admin-form--wide">
+            <input id="article-id" type="hidden" />
+            <input id="current-article-image" type="hidden" />
+            <div class="form-row">
+              <label>Title <input id="article-title" type="text" required /></label>
+              <label>Category <input id="article-category" type="text" required /></label>
+            </div>
+            <div class="form-row">
+              <label>Date <input id="article-date" type="date" /></label>
+              <div class="admin-upload-control">
+                <label>Featured Image <input id="article-image" type="file" accept="image/*" /></label>
+                <label class="toggle-line toggle-line--compact"><input id="remove-article-image" type="checkbox" /><span>Remove current article image</span></label>
+              </div>
+            </div>
+            <label>Summary <textarea id="article-summary" rows="3" required></textarea></label>
+            <label>Full Article Content <textarea id="article-content" rows="8" required></textarea></label>
+            <label>Tags <input id="article-tags" type="text" placeholder="Rare Books, Provenance, WWI" /></label>
+            <div class="form-row">
+              <label class="toggle-line"><input id="article-published" type="checkbox" checked /><span>Publish Article</span></label>
+              <label class="toggle-line"><input id="article-featured" type="checkbox" /><span>Feature Article</span></label>
+            </div>
+            <div class="button-group">
+              <button class="button button--primary" type="submit"><span id="article-submit-label">Create Article</span></button>
+              <button id="article-reset" class="button button--ghost" type="button">Clear</button>
+            </div>
+          </form>
+          <div id="articles-container" class="admin-list"></div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="enquiries">
+          <div class="admin-panel__header"><h2>Enquiries</h2><p>Recent requests, collection services and material sourcing enquiries.</p></div>
+          <div class="enquiry-filters">
+            <input id="enquiry-filter-name" type="search" placeholder="Filter by name" />
+            <select id="enquiry-filter-tag"><option value="">All tags</option></select>
+            <select id="enquiry-filter-status">
+              <option value="">All statuses</option>
+              <option>New</option>
+              <option>In Progress</option>
+              <option>Closed</option>
+            </select>
+            <input id="enquiry-filter-date" type="date" />
+          </div>
+          <div id="enquiries-container" class="enquiry-card-list"></div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="collection-requests">
+          <div class="admin-panel__header"><h2>Collection Requests</h2><p>Material sourcing and collection service requests separated from general enquiries.</p></div>
+          <div id="collection-requests-container" class="enquiry-card-list"></div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="settings">
+          <div class="admin-panel__header"><h2>Settings</h2><p>Public contact details used by BEAUMONT.</p></div>
+          <form id="settings-form" class="admin-form admin-form--wide">
+            <div class="form-row">
+              <label>Public Email <input id="setting-public-email" type="email" placeholder="enquiries@beaumont.co.uk" required /></label>
+              <label>Public Phone <input id="setting-public-phone" type="text" placeholder="07549 892003" required /></label>
+            </div>
+            <label>Address <textarea id="setting-address" rows="4" placeholder="BEAUMONT&#10;St James's House&#10;London SW1" required></textarea></label>
+            <button class="button button--primary" type="submit">Save Settings</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

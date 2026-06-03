@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collection Services | BEAUMONT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <div class="top-bar"><div class="top-bar__content"><p class="top-bar__label">Private enquiries by appointment</p><p class="top-bar__contact"><strong>Telephone:</strong> <a href="tel:07549892003">07549 892003</a></p><p class="top-bar__contact"><strong>Email:</strong> <a href="mailto:enquiries@beaumont.co.uk">enquiries@beaumont.co.uk</a></p></div></div>
+      <header class="site-header">
+        <div class="header-inner">
+          <a class="brand brand--crest" href="index.html" aria-label="BEAUMONT home"><div class="brand__crest" aria-hidden="true"><span>BEAUMONT</span></div><div class="brand__copy"><p class="brand__name">BEAUMONT</p><p class="brand__service">Curators of History</p></div></a>
+          <div class="header-actions"><a class="header-search" href="catalogue.html" aria-label="Search catalogue"><span aria-hidden="true"></span></a><a class="header-catalogue" href="catalogue.html">Catalogue</a><a class="header-sell" href="index.html#contact">Sell A Collection</a></div>
+          <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation"><span class="nav-toggle__bar"></span><span class="nav-toggle__bar"></span><span class="nav-toggle__bar"></span><span class="visually-hidden">Toggle navigation</span></button>
+          <nav id="primary-navigation" class="site-nav" aria-label="Primary navigation"><ul class="nav-list"><li><a href="index.html">Home</a></li><li><a href="catalogue.html">Catalogue</a></li><li><a href="collection-services.html" aria-current="page">Collection Services</a></li><li><a href="about.html">About</a></li><li><a href="journal.html">Journal</a></li><li><a href="index.html#contact">Contact</a></li></ul></nav>
+        </div>
+      </header>
+
+      <main>
+        <section class="about-hero about-hero--compact collection-services-hero">
+          <div class="about-hero__content">
+            <p class="eyebrow">RESEARCH-BASED ADVICE</p>
+            <h1>Collection Services</h1>
+            <h2>Research, sourcing and collection guidance</h2>
+            <p>Beaumont offers research-based collection guidance, market observations, provenance research and sourcing support for collectors, families and institutions.</p>
+            <ul class="editorial-service-list">
+              <li>Collection reviews</li>
+              <li>Provenance research</li>
+              <li>Historical research</li>
+              <li>Material sourcing</li>
+              <li>Collection development</li>
+              <li>Acquisition guidance</li>
+              <li>Consignment advice</li>
+              <li>Object identification</li>
+            </ul>
+            <p class="service-disclaimer">Beaumont provides research and market guidance based upon available historical and market information. Formal probate, insurance and regulated valuation services should be sought through appropriately qualified professionals where required.</p>
+            <a class="button button--primary" href="#material-request">Submit A Request</a>
+          </div>
+        </section>
+
+        <section class="sourcing-panel section--dark">
+          <div>
+            <p class="eyebrow">Collection Development &amp; Sourcing</p>
+            <h2>Looking For Something Specific?</h2>
+            <p>Beaumont assists collectors, researchers and institutions in locating books, maps, manuscripts and historical material that may not currently appear within our catalogue.</p>
+            <p>Through specialist research, dealer networks, auction monitoring and collection contacts, Beaumont can help identify and source material aligned to a client's collecting interests.</p>
+            <p>Whether searching for a regimental history, a battlefield map, a rare travel narrative or a specific historical document, enquiries are welcomed.</p>
+            <div class="service-actions">
+              <a class="button button--primary" href="#material-request">Submit A Request</a>
+              <a class="button button--secondary" href="index.html#contact">Contact Beaumont</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section about-section--cream">
+          <div class="section__intro">
+            <p class="eyebrow">Specialist Interests</p>
+            <h2>Areas of collecting knowledge</h2>
+          </div>
+          <div class="expertise-grid expertise-grid--eight">
+            <article class="expertise-card"><h3>Rare Books</h3><p>First editions, association copies, important historical works and specialist collecting areas.</p></article>
+            <article class="expertise-card"><h3>Military History</h3><p>Campaign studies, regimental histories, memoirs and researched material connected to conflict history.</p></article>
+            <article class="expertise-card"><h3>Maps &amp; Cartography</h3><p>Printed maps, trench maps, survey material and cartographic records with historical context.</p></article>
+            <article class="expertise-card"><h3>Travel &amp; Exploration</h3><p>Voyages, expedition narratives, exploration accounts and geographic works.</p></article>
+            <article class="expertise-card"><h3>Historical Documents</h3><p>Letters, papers, ephemera, archive groups and documentary material with provenance.</p></article>
+            <article class="expertise-card"><h3>Manuscripts</h3><p>Journals, signed material, working papers and handwritten sources requiring careful interpretation.</p></article>
+            <article class="expertise-card"><h3>Private Libraries</h3><p>Collection reviews, cataloguing support and guidance for inherited or specialist libraries.</p></article>
+            <article class="expertise-card"><h3>Historical Objects</h3><p>Selected objects where research, condition and provenance support meaningful collecting.</p></article>
+          </div>
+        </section>
+
+        <section id="material-request" class="material-request section--dark">
+          <div class="section__intro">
+            <p class="eyebrow">Material Sourcing Request</p>
+            <h3>Tell Beaumont what you are seeking</h3>
+            <p>Please provide as much detail as possible. Beaumont may be able to assist through specialist research, dealer networks and private collection contacts.</p>
+          </div>
+          <form id="material-request-form" class="contact-form">
+            <div class="material-request__grid">
+              <label for="request-name">Name<input id="request-name" name="name" type="text" required /></label>
+              <label for="request-title">Title Sought<input id="request-title" name="title_sought" type="text" /></label>
+              <label for="request-email">Email<input id="request-email" name="email" type="email" required /></label>
+              <label for="request-author">Author<input id="request-author" name="author" type="text" /></label>
+              <label for="request-telephone">Telephone<input id="request-telephone" name="telephone" type="tel" /></label>
+              <label for="request-subject">Subject Area<input id="request-subject" name="subject_area" type="text" /></label>
+              <label for="request-budget">Budget<input id="request-budget" name="budget" type="text" /></label>
+              <label for="request-period">Period<input id="request-period" name="period" type="text" /></label>
+            </div>
+            <label class="material-request__notes" for="request-notes">Additional Notes<textarea id="request-notes" name="additional_notes" rows="5"></textarea></label>
+            <button class="button button--primary" type="submit">Submit Material Sourcing Request</button>
+          </form>
+        </section>
+      </main>
+
+      <footer class="site-footer"><div class="footer-top"><div class="footer-column"><p class="eyebrow">BEAUMONT</p><p>Fine books, maps, manuscripts, historical documents and collection services.</p></div><div class="footer-column"><h4>Contact</h4><p><a href="mailto:enquiries@beaumont.co.uk">enquiries@beaumont.co.uk</a><br /><a href="tel:07549892003">07549 892003</a></p></div><div class="footer-column"><h4>Navigation</h4><a href="index.html">Home</a><br /><a href="catalogue.html">Catalogue</a><br /><a href="collection-services.html">Collection Services</a><br /><a href="journal.html">Journal</a><br /><a class="footer-admin-link" href="admin-login.html">Admin Login</a></div></div><div class="footer-bottom"><p>&copy; 2026 Beaumont. All Rights Reserved.</p></div></footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase.js"></script><script src="script.js"></script>
+  </body>
+</html>

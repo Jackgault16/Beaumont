@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login | BEAUMONT</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <section id="login-section" class="admin-login">
+        <div><p class="eyebrow">BEAUMONT ADMIN</p><h1>Catalogue Management</h1><p>Journal Management · Enquiries · Collection Requests</p></div>
+        <form id="login-form" class="admin-form">
+          <label for="username">Username</label><input id="username" type="text" autocomplete="username" required />
+          <label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required />
+          <button class="button button--primary" type="submit">Sign In</button>
+          <p data-status class="admin-status" role="status"></p>
+        </form>
+      </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase.js"></script><script src="script.js"></script>
+  </body>
+</html>
