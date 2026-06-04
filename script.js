@@ -262,6 +262,8 @@ const state = {
   editingItemId: null,
   editingTagId: null,
   editingCollectionId: null,
+  articleEditor: null,
+  articleEditorReady: null,
 };
 
 function hasSupabaseConfig() {
@@ -1000,6 +1002,118 @@ function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
 }
 
+function markdownInline(value = '') {
+  let html = escapeHtml(value);
+  html = html.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)/g, '<img src="$2" alt="$1" loading="lazy" />');
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+  html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  html = html.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+  return html;
+}
+
+function renderMarkdownTable(lines) {
+  const rows = lines.map((line) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim()));
+  const header = rows[0] || [];
+  const body = rows.slice(2);
+  return `
+    <div class="journal-table-wrap">
+      <table>
+        <thead><tr>${header.map((cell) => `<th>${markdownInline(cell)}</th>`).join('')}</tr></thead>
+        <tbody>${body.map((row) => `<tr>${row.map((cell) => `<td>${markdownInline(cell)}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function markdownToHtml(markdown = '') {
+  const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+  const blocks = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    let line = lines[i].trim();
+    if (!line) {
+      i += 1;
+      continue;
+    }
+
+    if (/^---+$/.test(line)) {
+      blocks.push('<hr />');
+      i += 1;
+      continue;
+    }
+
+    if (/^#{1,3}\s+/.test(line)) {
+      const level = line.match(/^#+/)[0].length;
+      blocks.push(`<h${level}>${markdownInline(line.replace(/^#{1,3}\s+/, ''))}</h${level}>`);
+      i += 1;
+      continue;
+    }
+
+    if (/^!\[[^\]]*\]\([^)]+\)/.test(line)) {
+      const imageHtml = markdownInline(line);
+      const next = (lines[i + 1] || '').trim();
+      const caption = /^\*[^*].*\*$/.test(next) ? next.replace(/^\*|\*$/g, '') : '';
+      blocks.push(`<figure>${imageHtml}${caption ? `<figcaption>${markdownInline(caption)}</figcaption>` : ''}</figure>`);
+      i += caption ? 2 : 1;
+      continue;
+    }
+
+    if (line.includes('|') && (lines[i + 1] || '').trim().match(/^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/)) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].trim().includes('|')) {
+        tableLines.push(lines[i]);
+        i += 1;
+      }
+      blocks.push(renderMarkdownTable(tableLines));
+      continue;
+    }
+
+    if (/^>\s?/.test(line)) {
+      const quoteLines = [];
+      while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+        quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
+        i += 1;
+      }
+      const quoteText = quoteLines.join(' ');
+      const isPull = /^pull quote:/i.test(quoteText);
+      blocks.push(`<blockquote${isPull ? ' class="journal-pull-quote"' : ''}>${markdownInline(quoteText.replace(/^pull quote:\s*/i, ''))}</blockquote>`);
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[-*]\s+/.test(lines[i].trim())) {
+        items.push(`<li>${markdownInline(lines[i].trim().replace(/^[-*]\s+/, ''))}</li>`);
+        i += 1;
+      }
+      blocks.push(`<ul>${items.join('')}</ul>`);
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+        items.push(`<li>${markdownInline(lines[i].trim().replace(/^\d+\.\s+/, ''))}</li>`);
+        i += 1;
+      }
+      blocks.push(`<ol>${items.join('')}</ol>`);
+      continue;
+    }
+
+    const paragraph = [];
+    while (i < lines.length && lines[i].trim() && !/^#{1,3}\s+/.test(lines[i].trim()) && !/^[-*]\s+/.test(lines[i].trim()) && !/^\d+\.\s+/.test(lines[i].trim()) && !/^>\s?/.test(lines[i].trim()) && !/^---+$/.test(lines[i].trim())) {
+      paragraph.push(lines[i].trim());
+      i += 1;
+    }
+    blocks.push(`<p>${markdownInline(paragraph.join(' '))}</p>`);
+  }
+
+  return blocks.join('');
+}
+
 function renderArticleCard(article, showImage = false) {
   const meta = [article.category || 'Journal', formatArticleDate(article.article_date)].filter(Boolean).map(escapeHtml).join(' &bull; ');
   const image = cleanText(article.featured_image_url);
@@ -1045,7 +1159,7 @@ function renderArticleDetail(article) {
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(article.title)}" onerror="this.remove();" />` : ''}
       </div>
       <div class="journal-detail__rule"></div>
-      <div class="journal-detail__content">${escapeHtml(article.content || '').replace(/\n/g, '<br />')}</div>
+      <div class="journal-detail__content">${markdownToHtml(article.content || '')}</div>
       ${related.length ? `
         <section class="journal-related" aria-label="Related articles">
           <h2>Related Articles</h2>
@@ -1114,11 +1228,166 @@ function resetArticleForm() {
   document.getElementById('article-id').value = '';
   if (document.getElementById('current-article-image')) document.getElementById('current-article-image').value = '';
   if (document.getElementById('remove-article-image')) document.getElementById('remove-article-image').checked = false;
+  setArticleEditorContent('');
   document.getElementById('article-submit-label').textContent = 'Create Article';
+}
+
+async function loadTiptapModules() {
+  const [
+    core,
+    starterKit,
+    link,
+    image,
+    table,
+    tableRow,
+    tableHeader,
+    tableCell,
+    markdown,
+  ] = await Promise.all([
+    import('https://esm.sh/@tiptap/core?bundle'),
+    import('https://esm.sh/@tiptap/starter-kit?bundle'),
+    import('https://esm.sh/@tiptap/extension-link?bundle'),
+    import('https://esm.sh/@tiptap/extension-image?bundle'),
+    import('https://esm.sh/@tiptap/extension-table?bundle'),
+    import('https://esm.sh/@tiptap/extension-table-row?bundle'),
+    import('https://esm.sh/@tiptap/extension-table-header?bundle'),
+    import('https://esm.sh/@tiptap/extension-table-cell?bundle'),
+    import('https://esm.sh/@tiptap/markdown?bundle'),
+  ]);
+  return {
+    Editor: core.Editor,
+    StarterKit: starterKit.default,
+    Link: link.default,
+    Image: image.default,
+    Table: table.default,
+    TableRow: tableRow.default,
+    TableHeader: tableHeader.default,
+    TableCell: tableCell.default,
+    Markdown: markdown.Markdown,
+  };
+}
+
+function syncArticleEditorToTextarea() {
+  const textarea = document.getElementById('article-content');
+  if (!textarea || !state.articleEditor) return;
+  textarea.value = typeof state.articleEditor.getMarkdown === 'function'
+    ? state.articleEditor.getMarkdown()
+    : textarea.value;
+}
+
+function setArticleEditorContent(markdown) {
+  const textarea = document.getElementById('article-content');
+  if (textarea) textarea.value = markdown || '';
+  if (!state.articleEditor) return;
+  try {
+    state.articleEditor.commands.setContent(markdown || '', { contentType: 'markdown' });
+  } catch (error) {
+    state.articleEditor.commands.setContent(markdownToHtml(markdown || ''));
+  }
+}
+
+function insertArticleMarkdown(markdown) {
+  if (!state.articleEditor) return;
+  try {
+    state.articleEditor.commands.insertContent(markdown, { contentType: 'markdown' });
+  } catch (error) {
+    state.articleEditor.commands.insertContent(markdownToHtml(markdown));
+  }
+  syncArticleEditorToTextarea();
+}
+
+function runArticleEditorAction(action) {
+  const editor = state.articleEditor;
+  if (!editor) return;
+  if (action === 'bold') editor.chain().focus().toggleBold().run();
+  if (action === 'italic') editor.chain().focus().toggleItalic().run();
+  if (action === 'heading2') editor.chain().focus().toggleHeading({ level: 2 }).run();
+  if (action === 'heading3') editor.chain().focus().toggleHeading({ level: 3 }).run();
+  if (action === 'bulletList') editor.chain().focus().toggleBulletList().run();
+  if (action === 'orderedList') editor.chain().focus().toggleOrderedList().run();
+  if (action === 'blockquote') editor.chain().focus().toggleBlockquote().run();
+  if (action === 'horizontalRule') editor.chain().focus().setHorizontalRule().run();
+  if (action === 'link') {
+    const href = window.prompt('Link URL');
+    if (href) editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
+  }
+  if (action === 'image') {
+    const src = window.prompt('Image URL');
+    if (!src) return;
+    const alt = window.prompt('Image description') || '';
+    const caption = window.prompt('Image caption') || '';
+    insertArticleMarkdown(`\n![${alt}](${src})${caption ? `\n*${caption}*` : ''}\n`);
+  }
+  if (action === 'table') {
+    insertArticleMarkdown('\n| Heading | Heading |\n| --- | --- |\n| Cell | Cell |\n');
+  }
+  if (action === 'pullQuote') {
+    const quote = window.prompt('Pull quote text');
+    if (quote) insertArticleMarkdown(`\n> Pull quote: ${quote}\n`);
+  }
+  if (action === 'references') {
+    insertArticleMarkdown('\n## References\n\n1. Reference note\n');
+  }
+  syncArticleEditorToTextarea();
+}
+
+function updateArticleToolbarState() {
+  const editor = state.articleEditor;
+  if (!editor) return;
+  document.querySelectorAll('[data-editor-action]').forEach((button) => {
+    const action = button.dataset.editorAction;
+    const active = (
+      (action === 'bold' && editor.isActive('bold')) ||
+      (action === 'italic' && editor.isActive('italic')) ||
+      (action === 'heading2' && editor.isActive('heading', { level: 2 })) ||
+      (action === 'heading3' && editor.isActive('heading', { level: 3 })) ||
+      (action === 'bulletList' && editor.isActive('bulletList')) ||
+      (action === 'orderedList' && editor.isActive('orderedList')) ||
+      (action === 'blockquote' && editor.isActive('blockquote'))
+    );
+    button.classList.toggle('is-active', Boolean(active));
+  });
+}
+
+async function initArticleEditor() {
+  const element = document.getElementById('article-rich-editor');
+  const textarea = document.getElementById('article-content');
+  if (!element || !textarea || state.articleEditor) return;
+  state.articleEditorReady = state.articleEditorReady || loadTiptapModules().then(({ Editor, StarterKit, Link, Image, Table, TableRow, TableHeader, TableCell, Markdown }) => {
+    state.articleEditor = new Editor({
+      element,
+      extensions: [
+        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+        Link.configure({ openOnClick: false }),
+        Image,
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        Markdown,
+      ],
+      content: '',
+      onUpdate: () => {
+        syncArticleEditorToTextarea();
+        updateArticleToolbarState();
+      },
+      onSelectionUpdate: updateArticleToolbarState,
+    });
+    document.body.classList.add('has-rich-article-editor');
+    setArticleEditorContent(textarea.value || '');
+    document.querySelectorAll('[data-editor-action]').forEach((button) => {
+      button.addEventListener('click', () => runArticleEditorAction(button.dataset.editorAction));
+    });
+  }).catch((error) => {
+    console.warn('Tiptap editor failed to load', error);
+    setStatus('Rich text editor could not load. Markdown textarea fallback is available.', 'error');
+  });
+  await state.articleEditorReady;
 }
 
 async function saveArticle(event) {
   event.preventDefault();
+  syncArticleEditorToTextarea();
   const client = requireClient();
   const rawId = document.getElementById('article-id').value.trim();
   const id = isUuid(rawId) ? rawId : '';
@@ -1183,6 +1452,7 @@ function populateArticleForm(article) {
   if (document.getElementById('remove-article-image')) document.getElementById('remove-article-image').checked = false;
   document.getElementById('article-submit-label').textContent = persisted ? 'Update Article' : 'Create Article';
   showAdminSection('journal');
+  setArticleEditorContent(article.content || '');
   if (!persisted) setStatus('Sample article loaded as a new draft. Saving will create a real journal article.', 'success');
 }
 
@@ -1479,6 +1749,7 @@ async function openAdminDashboard() {
   renderSettingsForm();
   renderAdminCounts();
   showAdminSection('inventory');
+  initArticleEditor();
 }
 
 async function initAdminPage() {

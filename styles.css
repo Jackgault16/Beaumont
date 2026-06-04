@@ -7772,3 +7772,294 @@ button,
     margin-left: auto;
   }
 }
+
+.rich-editor-field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.rich-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rich-editor-toolbar button {
+  min-height: 2.15rem;
+  padding: 0.42rem 0.7rem;
+  border: 1px solid rgba(148, 116, 58, 0.32);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #15251e;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.rich-editor-toolbar button:hover,
+.rich-editor-toolbar button:focus-visible,
+.rich-editor-toolbar button.is-active {
+  border-color: var(--antique-gold);
+  background: rgba(196, 161, 90, 0.16);
+  color: #0a241d;
+}
+
+.rich-editor-surface {
+  min-height: 20rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 116, 58, 0.34);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #15251e;
+  overflow-x: auto;
+}
+
+.rich-editor-source {
+  min-height: 10rem;
+}
+
+.has-rich-article-editor .rich-editor-source {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.rich-editor-surface .ProseMirror {
+  min-height: 18rem;
+  outline: none;
+}
+
+.rich-editor-surface .ProseMirror > *:first-child {
+  margin-top: 0;
+}
+
+.rich-editor-surface .ProseMirror h1,
+.rich-editor-surface .ProseMirror h2,
+.rich-editor-surface .ProseMirror h3 {
+  margin: 1.35rem 0 0.55rem;
+  color: #0a241d;
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.rich-editor-surface .ProseMirror h1 {
+  font-size: 2rem;
+}
+
+.rich-editor-surface .ProseMirror h2 {
+  font-size: 1.55rem;
+}
+
+.rich-editor-surface .ProseMirror h3 {
+  font-size: 1.25rem;
+}
+
+.rich-editor-surface .ProseMirror p,
+.rich-editor-surface .ProseMirror li {
+  color: #15251e;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.rich-editor-surface .ProseMirror blockquote {
+  margin: 1rem 0;
+  padding: 0.3rem 0 0.3rem 1rem;
+  border-left: 3px solid var(--antique-gold);
+  color: #0a241d;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.55;
+}
+
+.rich-editor-surface .ProseMirror img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0 0.35rem;
+  border-radius: 6px;
+}
+
+.rich-editor-surface .ProseMirror table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.rich-editor-surface .ProseMirror th,
+.rich-editor-surface .ProseMirror td {
+  min-width: 6rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(10, 36, 29, 0.18);
+  vertical-align: top;
+}
+
+.journal-detail__content > * {
+  overflow-wrap: break-word;
+}
+
+.journal-detail__content > * + * {
+  margin-top: 1.25rem;
+}
+
+.journal-detail__content h1,
+.journal-detail__content h2,
+.journal-detail__content h3 {
+  margin: 2.2rem 0 0.85rem;
+  color: var(--library-green);
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.16;
+}
+
+.journal-detail__content h1 {
+  font-size: clamp(2rem, 5vw, 3.3rem);
+}
+
+.journal-detail__content h2 {
+  font-size: clamp(1.55rem, 3.5vw, 2.35rem);
+}
+
+.journal-detail__content h3 {
+  font-size: clamp(1.25rem, 2.8vw, 1.7rem);
+}
+
+.journal-detail__content p {
+  margin: 0 0 1.35rem;
+  color: var(--library-green);
+  line-height: 1.95;
+}
+
+.journal-detail__content a {
+  color: var(--library-green);
+  text-decoration-color: var(--antique-gold);
+  text-underline-offset: 0.18em;
+}
+
+.journal-detail__content ul,
+.journal-detail__content ol {
+  margin: 1.2rem 0 1.45rem;
+  padding-left: 1.35rem;
+  color: var(--library-green);
+  line-height: 1.85;
+}
+
+.journal-detail__content li + li {
+  margin-top: 0.45rem;
+}
+
+.journal-detail__content blockquote {
+  margin: 1.8rem 0;
+  padding: 0.35rem 0 0.35rem 1.25rem;
+  border-left: 3px solid var(--antique-gold);
+  color: var(--library-green);
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 1.9rem);
+  line-height: 1.55;
+}
+
+.journal-detail__content .journal-pull-quote {
+  padding-left: 1.4rem;
+  font-size: clamp(1.55rem, 4vw, 2.35rem);
+}
+
+.journal-detail__content hr {
+  width: 100%;
+  height: 1px;
+  margin: 2rem 0;
+  border: 0;
+  background: rgba(148, 116, 58, 0.34);
+}
+
+.journal-detail__content figure {
+  margin: 2rem 0;
+}
+
+.journal-detail__content figure img,
+.journal-detail__content > p > img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+  border: 1px solid rgba(148, 116, 58, 0.22);
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.journal-detail__content figcaption {
+  margin-top: 0.55rem;
+  color: rgba(10, 36, 29, 0.68);
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.journal-table-wrap {
+  width: 100%;
+  margin: 1.7rem 0;
+  overflow-x: auto;
+}
+
+.journal-detail__content table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+  background: rgba(255, 252, 244, 0.58);
+  color: var(--library-green);
+}
+
+.journal-detail__content th,
+.journal-detail__content td {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(148, 116, 58, 0.28);
+  text-align: left;
+  vertical-align: top;
+}
+
+.journal-detail__content th {
+  background: rgba(196, 161, 90, 0.14);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .rich-editor-toolbar {
+    gap: 0.32rem;
+  }
+
+  .rich-editor-toolbar button {
+    flex: 1 1 auto;
+    padding-right: 0.55rem;
+    padding-left: 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .rich-editor-surface {
+    min-height: 17rem;
+    padding: 0.85rem;
+  }
+
+  .rich-editor-surface .ProseMirror {
+    min-height: 15rem;
+  }
+
+  .journal-detail__content {
+    font-size: 1rem;
+  }
+
+  .journal-detail__content blockquote {
+    padding-left: 1rem;
+  }
+}

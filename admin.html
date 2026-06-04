@@ -235,7 +235,26 @@
               </div>
             </div>
             <label>Summary <textarea id="article-summary" rows="3" required></textarea></label>
-            <label>Full Article Content <textarea id="article-content" rows="8" required></textarea></label>
+            <div class="rich-editor-field">
+              <label for="article-content">Full Article Content</label>
+              <div class="rich-editor-toolbar" aria-label="Article formatting toolbar">
+                <button type="button" data-editor-action="bold">Bold</button>
+                <button type="button" data-editor-action="italic">Italic</button>
+                <button type="button" data-editor-action="heading2">Heading 2</button>
+                <button type="button" data-editor-action="heading3">Heading 3</button>
+                <button type="button" data-editor-action="bulletList">Bullet List</button>
+                <button type="button" data-editor-action="orderedList">Numbered List</button>
+                <button type="button" data-editor-action="blockquote">Quote</button>
+                <button type="button" data-editor-action="link">Link</button>
+                <button type="button" data-editor-action="image">Image</button>
+                <button type="button" data-editor-action="table">Table</button>
+                <button type="button" data-editor-action="pullQuote">Pull Quote</button>
+                <button type="button" data-editor-action="references">References</button>
+                <button type="button" data-editor-action="horizontalRule">Horizontal Rule</button>
+              </div>
+              <div id="article-rich-editor" class="rich-editor-surface" aria-label="Rich article editor"></div>
+              <textarea id="article-content" class="rich-editor-source" rows="8" required></textarea>
+            </div>
             <label>Tags <input id="article-tags" type="text" placeholder="Rare Books, Provenance, WWI" /></label>
             <div class="form-row">
               <label class="toggle-line"><input id="article-published" type="checkbox" checked /><span>Publish Article</span></label>
@@ -286,6 +305,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
-    <script src="script.js?v=20260604-article-uuid"></script>
+    <script src="script.js?v=20260604-rich-editor"></script>
   </body>
 </html>
