@@ -7779,9 +7779,13 @@ button,
 }
 
 .rich-editor-toolbar {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.has-rich-article-editor .rich-editor-toolbar {
+  display: flex;
 }
 
 .rich-editor-toolbar button {
@@ -7806,6 +7810,7 @@ button,
 }
 
 .rich-editor-surface {
+  display: none;
   min-height: 20rem;
   padding: 1rem;
   border: 1px solid rgba(148, 116, 58, 0.34);
@@ -7813,6 +7818,10 @@ button,
   background: #ffffff;
   color: #15251e;
   overflow-x: auto;
+}
+
+.has-rich-article-editor .rich-editor-surface {
+  display: block;
 }
 
 .rich-editor-source {

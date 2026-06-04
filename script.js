@@ -1241,30 +1241,21 @@ async function loadTiptapModules() {
     link,
     image,
     table,
-    tableRow,
-    tableHeader,
-    tableCell,
     markdown,
   ] = await Promise.all([
-    import('https://esm.sh/@tiptap/core?bundle'),
-    import('https://esm.sh/@tiptap/starter-kit?bundle'),
-    import('https://esm.sh/@tiptap/extension-link?bundle'),
-    import('https://esm.sh/@tiptap/extension-image?bundle'),
-    import('https://esm.sh/@tiptap/extension-table?bundle'),
-    import('https://esm.sh/@tiptap/extension-table-row?bundle'),
-    import('https://esm.sh/@tiptap/extension-table-header?bundle'),
-    import('https://esm.sh/@tiptap/extension-table-cell?bundle'),
-    import('https://esm.sh/@tiptap/markdown?bundle'),
+    import('https://esm.sh/@tiptap/core@3.25.0'),
+    import('https://esm.sh/@tiptap/starter-kit@3.25.0'),
+    import('https://esm.sh/@tiptap/extension-link@3.25.0'),
+    import('https://esm.sh/@tiptap/extension-image@3.25.0'),
+    import('https://esm.sh/@tiptap/extension-table@3.25.0'),
+    import('https://esm.sh/@tiptap/markdown@3.25.0'),
   ]);
   return {
     Editor: core.Editor,
-    StarterKit: starterKit.default,
-    Link: link.default,
-    Image: image.default,
-    Table: table.default,
-    TableRow: tableRow.default,
-    TableHeader: tableHeader.default,
-    TableCell: tableCell.default,
+    StarterKit: starterKit.default || starterKit.StarterKit,
+    Link: link.default || link.Link,
+    Image: image.default || image.Image,
+    TableKit: table.TableKit || table.default,
     Markdown: markdown.Markdown,
   };
 }
@@ -1355,17 +1346,14 @@ async function initArticleEditor() {
   const element = document.getElementById('article-rich-editor');
   const textarea = document.getElementById('article-content');
   if (!element || !textarea || state.articleEditor) return;
-  state.articleEditorReady = state.articleEditorReady || loadTiptapModules().then(({ Editor, StarterKit, Link, Image, Table, TableRow, TableHeader, TableCell, Markdown }) => {
+  state.articleEditorReady = state.articleEditorReady || loadTiptapModules().then(({ Editor, StarterKit, Link, Image, TableKit, Markdown }) => {
     state.articleEditor = new Editor({
       element,
       extensions: [
-        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+        StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }),
         Link.configure({ openOnClick: false }),
         Image,
-        Table.configure({ resizable: true }),
-        TableRow,
-        TableHeader,
-        TableCell,
+        TableKit.configure({ table: { resizable: true } }),
         Markdown,
       ],
       content: '',
