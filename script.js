@@ -1,6 +1,5 @@
 ﻿const CONFIG = window.BEAUMONT_SUPABASE_CONFIG || {};
 const ADMIN_USERNAME = 'admin';
-
 const DEFAULT_CATEGORIES = ['Books', 'Maps', 'Documents', 'Historical Objects'];
 const DEFAULT_TAGS = [
   'Military History', 'WWI', 'WWII', 'Napoleonic Wars', 'Victorian', 'Georgian',
@@ -735,6 +734,14 @@ function selectedTagIds() {
   return [...document.querySelectorAll('input[name="tags"]:checked')].map((input) => input.value);
 }
 
+function createUploadId() {
+  if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  const randomPart = Math.random().toString(36).slice(2);
+  return `${Date.now()}-${randomPart}`;
+}
+
 async function uploadFile(file, folder) {
   const client = requireClient();
   if (!CONFIG.imageBucket) throw new Error('Image upload failed. Storage bucket is not configured.');
@@ -742,7 +749,7 @@ async function uploadFile(file, folder) {
   if (sessionError) throw new Error(`Image upload failed: ${sessionError.message}`);
   if (!sessionData?.session && folder !== 'enquiries') throw new Error('Image upload failed: admin session not found. Please log in again.');
   const ext = file.name.split('.').pop();
-  const path = `${folder}/${crypto.randomUUID()}.${ext}`;
+  const path = `${folder}/${createUploadId()}.${ext}`;
   const { error } = await client.storage.from(CONFIG.imageBucket).upload(path, file, {
     cacheControl: '3600',
     upsert: false,
@@ -1214,7 +1221,7 @@ function renderEnquiryCard(enquiry) {
           <form class="enquiry-notes" data-enquiry-notes="${enquiry.id}">
             <label>Status
               <select name="status">
-                ${['New', 'In Progress', 'Closed'].map((option) => `<option${option === status ? ' selected' : ''}>${option}</option>`).join('')}
+                ${['New', 'Replied', 'Archived'].map((option) => `<option${option === status ? ' selected' : ''}>${option}</option>`).join('')}
               </select>
             </label>
             <label>Internal Notes
@@ -1326,7 +1333,7 @@ async function loadSettings() {
   if (error) throw error;
   state.settings = data || {
     id: 'public',
-    public_email: 'enquiries@beaumont.co.uk',
+    public_email: 'jackgault16@yahoo.co.uk',
     public_phone: '07549 892003',
     address: "BEAUMONT\nSt James's House\nLondon SW1",
   };

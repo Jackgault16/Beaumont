@@ -102,7 +102,7 @@ create table if not exists public.journal_articles (
 
 create table if not exists public.site_settings (
   id text primary key default 'public',
-  public_email text not null default 'enquiries@beaumont.co.uk',
+  public_email text not null default 'jackgault16@yahoo.co.uk',
   public_phone text not null default '07549 892003',
   address text not null default 'BEAUMONT
 St James''s House
