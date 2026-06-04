@@ -8063,3 +8063,13 @@ button,
     padding-left: 1rem;
   }
 }
+
+/* Keep the homepage wordmark intact; the global heading wrap safeguard must not split BEAUMONT. */
+.hero h2 {
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  font-size: clamp(2.25rem, 9.2vw, 10.8rem) !important;
+  letter-spacing: clamp(0.03em, 0.65vw, 0.08em) !important;
+}
