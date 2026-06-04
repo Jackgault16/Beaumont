@@ -8110,3 +8110,67 @@ button,
     letter-spacing: 0.01em !important;
   }
 }
+
+/* Compact dealer catalogue header: prioritise objects over landing-page whitespace. */
+.catalogue-page > .catalogue-header {
+  width: min(1320px, calc(100% - 2rem)) !important;
+  max-width: 1320px !important;
+  margin: clamp(1rem, 2vw, 1.5rem) auto 0 !important;
+  padding: 48px clamp(1.25rem, 3vw, 2.5rem) !important;
+  text-align: left !important;
+  background: #f4ecdc !important;
+  color: #082b22 !important;
+  border: 1px solid var(--beaumont-panel-border) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.catalogue-page > .catalogue-header .eyebrow {
+  margin: 0 0 0.65rem !important;
+  color: #9a6f23 !important;
+  text-align: left !important;
+}
+
+.catalogue-page > .catalogue-header h1 {
+  margin: 0 0 0.55rem !important;
+  color: #082b22 !important;
+  font-size: clamp(2.35rem, 4.5vw, 4.5rem) !important;
+  line-height: 1.02 !important;
+  text-align: left !important;
+}
+
+.catalogue-page > .catalogue-header p {
+  max-width: 680px !important;
+  margin: 0 !important;
+  color: rgba(8, 43, 34, 0.76) !important;
+  font-size: clamp(1rem, 1.35vw, 1.16rem) !important;
+  line-height: 1.55 !important;
+  text-align: left !important;
+}
+
+.catalogue-page .catalogue-shell {
+  width: min(1320px, calc(100% - 2rem)) !important;
+  margin-top: 1rem !important;
+  margin-bottom: clamp(2rem, 4vw, 3rem) !important;
+}
+
+.catalogue-page .catalogue-toolbar {
+  margin-bottom: 1rem !important;
+  padding: clamp(1rem, 2vw, 1.35rem) !important;
+}
+
+.catalogue-page #catalogue-listing {
+  margin-top: 1rem !important;
+  padding: clamp(0.9rem, 1.8vw, 1.15rem) !important;
+}
+
+@media (max-width: 700px) {
+  .catalogue-page > .catalogue-header {
+    width: min(100% - 1rem, 1320px) !important;
+    padding: 2rem 1.25rem !important;
+  }
+
+  .catalogue-page .catalogue-shell {
+    width: min(100% - 1rem, 1320px) !important;
+  }
+}
