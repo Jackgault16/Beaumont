@@ -510,17 +510,19 @@ async function initHomepageInventory() {
   }
 }
 
-function renderCatalogueCard(item) {
+function renderCatalogueCard(item, index = 0) {
   const image = realItemImage(item);
   const tags = itemTags(item);
   const description = cleanText(item.short_description);
+  const featured = index === 0;
   return `
-    <article class="catalogue-item">
+    <article class="catalogue-item${featured ? ' catalogue-item--featured' : ''}">
       <a class="catalogue-item__image${image ? '' : ' catalogue-item__image--empty'}" href="catalogue.html?item=${item.id}">
         ${cataloguePlaceholder()}
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.remove();" />` : ''}
       </a>
       <div class="catalogue-item__content">
+        ${featured ? '<p class="catalogue-item__feature-label">Featured Object</p>' : ''}
         <div class="catalogue-item__title">${escapeHtml(item.title)}</div>
         <div class="catalogue-item__meta">${escapeHtml(item.reference_number)} · ${escapeHtml(item.category)}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</div>
         <div class="catalogue-item__price">${formatPrice(item.price)}</div>
@@ -528,7 +530,7 @@ function renderCatalogueCard(item) {
         <div class="catalogue-item__details">
           ${item.collection_name ? `<p><strong>Collection:</strong> ${escapeHtml(item.collection_name)}</p>` : ''}
           <p><strong>Availability:</strong> ${escapeHtml(availabilityLabel(item))}</p>
-          ${tags.length ? `<p><strong>Tags:</strong> ${tags.map(escapeHtml).join(', ')}</p>` : ''}
+          ${featured && tags.length ? `<p><strong>Tags:</strong> ${tags.map(escapeHtml).join(', ')}</p>` : ''}
         </div>
         <a href="catalogue.html?item=${item.id}" class="button--enquire">View Object</a>
       </div>
@@ -571,7 +573,7 @@ function renderCatalogueItems() {
   const items = filteredCatalogueItems();
   if (count) count.textContent = `${items.length} object${items.length === 1 ? '' : 's'}`;
   grid.innerHTML = items.length
-    ? items.map(renderCatalogueCard).join('')
+    ? items.map((item, index) => renderCatalogueCard(item, index)).join('')
     : '<div class="catalogue-empty" style="grid-column:1/-1;"><p>No items match these filters.</p></div>';
 }
 
