@@ -1120,7 +1120,9 @@ function resetArticleForm() {
 async function saveArticle(event) {
   event.preventDefault();
   const client = requireClient();
-  const id = document.getElementById('article-id').value;
+  const rawId = document.getElementById('article-id').value.trim();
+  const id = isUuid(rawId) ? rawId : '';
+  if (rawId && !id) document.getElementById('article-id').value = '';
   setStatus('Saving article...');
   try {
     if (!document.getElementById('article-title').value.trim() || !document.getElementById('article-category').value.trim() || !document.getElementById('article-summary').value.trim() || !document.getElementById('article-content').value.trim()) {
