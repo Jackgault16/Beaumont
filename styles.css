@@ -8064,12 +8064,49 @@ button,
   }
 }
 
-/* Keep the homepage wordmark intact; the global heading wrap safeguard must not split BEAUMONT. */
-.hero h2 {
+/* Keep display wordmarks intact; the global heading wrap safeguard must not split brand-scale text. */
+.hero h2,
+.about-hero:not(.collection-services-hero) h1,
+.about-hero:not(.collection-services-hero) h2,
+.collection-services-hero h1 {
   max-width: 100% !important;
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: normal !important;
-  font-size: clamp(2.25rem, 9.2vw, 10.8rem) !important;
-  letter-spacing: clamp(0.03em, 0.65vw, 0.08em) !important;
+  letter-spacing: clamp(0.025em, 0.55vw, 0.075em) !important;
+}
+
+.hero h2 {
+  font-size: clamp(2.05rem, 8.4vw, 9.8rem) !important;
+}
+
+.about-hero:not(.collection-services-hero) h1,
+.about-hero:not(.collection-services-hero) h2,
+.collection-services-hero h1 {
+  font-size: clamp(2rem, 7.8vw, 8.4rem) !important;
+}
+
+.collection-services-hero h2 {
+  max-width: min(100%, 1120px) !important;
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  font-size: clamp(2.1rem, 5.6vw, 6rem) !important;
+  line-height: 1.08 !important;
+  letter-spacing: clamp(0.01em, 0.28vw, 0.045em) !important;
+}
+
+@media (max-width: 760px) {
+  .hero h2,
+  .about-hero:not(.collection-services-hero) h1,
+  .about-hero:not(.collection-services-hero) h2,
+  .collection-services-hero h1 {
+    font-size: clamp(1.75rem, 10.8vw, 3.2rem) !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  .collection-services-hero h2 {
+    font-size: clamp(1.55rem, 9vw, 2.7rem) !important;
+    letter-spacing: 0.01em !important;
+  }
 }
