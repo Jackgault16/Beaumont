@@ -996,6 +996,10 @@ function formatArticleDate(value) {
   return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+}
+
 function renderArticleCard(article, showImage = false) {
   const meta = [article.category || 'Journal', formatArticleDate(article.article_date)].filter(Boolean).map(escapeHtml).join(' &bull; ');
   const image = cleanText(article.featured_image_url);
@@ -1141,24 +1145,30 @@ async function saveArticle(event) {
 function renderAdminArticles() {
   const container = document.getElementById('articles-container');
   if (!container) return;
-  container.innerHTML = state.articles.map((article) => `
-    <article class="admin-row">
-      <div><strong>${escapeHtml(article.title)}</strong><span>${escapeHtml(article.category)} · ${escapeHtml(article.article_date || '')}</span></div>
-      <div>${article.published ? 'Published' : 'Draft'}</div>
-      <div>${article.featured ? 'Featured' : 'Standard'}</div>
-      <div>${(article.tags || []).map(escapeHtml).join(', ')}</div>
-      <div class="admin-row__actions">
-        <button class="button button--secondary" type="button" data-edit-article="${article.id}">Edit</button>
-        <button class="button button--ghost" type="button" data-toggle-article-published="${article.id}">${article.published ? 'Unpublish' : 'Publish'}</button>
-        <button class="button button--ghost" type="button" data-toggle-article-featured="${article.id}">${article.featured ? 'Unfeature' : 'Feature'}</button>
-        <button class="button button--danger" type="button" data-delete-article="${article.id}">Delete</button>
-      </div>
-    </article>
-  `).join('');
+  container.innerHTML = state.articles.map((article) => {
+    const persisted = isUuid(article.id);
+    return `
+      <article class="admin-row">
+        <div><strong>${escapeHtml(article.title)}</strong><span>${escapeHtml(article.category)} · ${escapeHtml(article.article_date || '')}</span></div>
+        <div>${article.published ? 'Published' : 'Draft'}</div>
+        <div>${article.featured ? 'Featured' : 'Standard'}</div>
+        <div>${(article.tags || []).map(escapeHtml).join(', ')}</div>
+        <div class="admin-row__actions">
+          <button class="button button--secondary" type="button" data-edit-article="${article.id}">${persisted ? 'Edit' : 'Use as Draft'}</button>
+          ${persisted ? `
+            <button class="button button--ghost" type="button" data-toggle-article-published="${article.id}">${article.published ? 'Unpublish' : 'Publish'}</button>
+            <button class="button button--ghost" type="button" data-toggle-article-featured="${article.id}">${article.featured ? 'Unfeature' : 'Feature'}</button>
+            <button class="button button--danger" type="button" data-delete-article="${article.id}">Delete</button>
+          ` : '<span class="admin-row__hint">Sample article</span>'}
+        </div>
+      </article>
+    `;
+  }).join('');
 }
 
 function populateArticleForm(article) {
-  document.getElementById('article-id').value = article.id;
+  const persisted = isUuid(article.id);
+  document.getElementById('article-id').value = persisted ? article.id : '';
   document.getElementById('article-title').value = article.title || '';
   document.getElementById('article-category').value = article.category || '';
   document.getElementById('article-date').value = article.article_date || '';
@@ -1169,11 +1179,13 @@ function populateArticleForm(article) {
   document.getElementById('article-featured').checked = Boolean(article.featured);
   if (document.getElementById('current-article-image')) document.getElementById('current-article-image').value = article.featured_image_url || '';
   if (document.getElementById('remove-article-image')) document.getElementById('remove-article-image').checked = false;
-  document.getElementById('article-submit-label').textContent = 'Update Article';
+  document.getElementById('article-submit-label').textContent = persisted ? 'Update Article' : 'Create Article';
   showAdminSection('journal');
+  if (!persisted) setStatus('Sample article loaded as a new draft. Saving will create a real journal article.', 'success');
 }
 
 async function updateArticle(id, payload) {
+  if (!isUuid(id)) throw new Error('Sample articles cannot be updated directly. Use as Draft, then save to create a real article.');
   const { error } = await requireClient().from('journal_articles').update(payload).eq('id', id);
   if (error) throw error;
   await loadArticles(true);
@@ -1182,6 +1194,10 @@ async function updateArticle(id, payload) {
 }
 
 async function deleteArticle(id) {
+  if (!isUuid(id)) {
+    setStatus('Sample articles cannot be deleted from Supabase.', 'error');
+    return;
+  }
   if (!window.confirm('Delete this article?')) return;
   const { error } = await requireClient().from('journal_articles').delete().eq('id', id);
   if (error) throw error;
