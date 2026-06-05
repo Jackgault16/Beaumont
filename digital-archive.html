@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digital Archive | BEAUMONT</title>
+    <meta name="description" content="Digitised books, documents, scans and research material made available for historical study and private research." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=20260604-editor-fix" />
+  </head>
+  <body class="catalogue-page digital-archive-page">
+    <div class="page-shell catalogue-page-shell">
+      <div class="top-bar">
+        <div class="top-bar__content">
+          <p class="top-bar__label">Private enquiries by appointment</p>
+          <div class="top-bar__divider"></div>
+          <p class="top-bar__contact"><strong>Telephone:</strong> <a href="tel:07549892003">07549 892003</a></p>
+          <p class="top-bar__contact"><strong>Email:</strong> <a href="mailto:jackgault16@yahoo.co.uk">jackgault16@yahoo.co.uk</a></p>
+        </div>
+      </div>
+      <header class="site-header">
+        <div class="header-inner">
+          <a class="brand brand--crest" href="index.html" aria-label="BEAUMONT home">
+            <div class="brand__crest" aria-hidden="true"><span>BEAUMONT</span></div>
+            <div class="brand__copy">
+              <p class="brand__name">BEAUMONT</p>
+              <p class="brand__service">Curators of History</p>
+            </div>
+          </a>
+          <div class="header-actions">
+            <a class="header-search" href="catalogue.html" aria-label="Search catalogue"><span aria-hidden="true"></span></a>
+            <a class="header-catalogue" href="catalogue.html">Catalogue</a>
+            <a class="header-sell" href="index.html#contact">Sell A Collection</a>
+          </div>
+          <button class="nav-toggle" aria-expanded="false" aria-controls="primary-navigation">
+            <span class="nav-toggle__bar"></span>
+            <span class="nav-toggle__bar"></span>
+            <span class="nav-toggle__bar"></span>
+            <span class="visually-hidden">Toggle navigation</span>
+          </button>
+          <nav id="primary-navigation" class="site-nav" aria-label="Primary navigation">
+            <ul class="nav-list">
+              <li><a href="index.html">Home</a></li>
+              <li><a href="catalogue.html">Catalogue</a></li>
+              <li><a href="collection-services.html">Collection Services</a></li>
+              <li><a href="about.html">About</a></li>
+              <li><a href="journal.html">Journal</a></li>
+              <li><a href="digital-archive.html" aria-current="page">Digital Archive</a></li>
+              <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+    </div>
+
+    <header class="catalogue-header">
+      <p class="eyebrow">Research Library</p>
+      <h1>Digital Archive</h1>
+      <p>Digitised books, documents, scans and research material made available for historical study and private research.</p>
+    </header>
+
+    <main class="catalogue-shell digital-archive-shell">
+      <section class="archive-intro">
+        <p>The Beaumont Digital Archive contains selected digitised material, including books, pamphlets, maps, documents, scans and research files. Items are provided for study, reference and historical interest, with downloadable files where available.</p>
+      </section>
+
+      <section class="catalogue-toolbar" aria-label="Digital archive filters">
+        <div class="catalogue-search">
+          <label for="archive-search">Search archive</label>
+          <input id="archive-search" data-archive-filter type="search" placeholder="Search by title, creator, source, description or tag" />
+        </div>
+        <div class="filter-grid archive-filter-grid">
+          <label>
+            Category
+            <select id="archive-filter-category" data-archive-filter></select>
+          </label>
+          <label>
+            Date / Year
+            <select id="archive-filter-date" data-archive-filter></select>
+          </label>
+          <label>
+            Tags
+            <select id="archive-filter-tag" data-archive-filter></select>
+          </label>
+          <label>
+            File Type
+            <select id="archive-filter-file-type" data-archive-filter></select>
+          </label>
+          <label>
+            Sort
+            <select id="archive-sort" data-archive-filter>
+              <option value="featured">Featured first</option>
+              <option value="newest">Newest added</option>
+              <option value="title">Title A-Z</option>
+              <option value="date">Date / Year</option>
+            </select>
+          </label>
+        </div>
+        <div class="catalogue-toolbar__footer">
+          <span id="archive-count">Loading archive...</span>
+          <button id="archive-clear-filters" class="button button--secondary" type="button">Clear Filters</button>
+        </div>
+      </section>
+
+      <section id="archive-grid" class="archive-grid catalogue-grid" aria-live="polite">
+        <div class="catalogue-empty">
+          <p>Loading Digital Archive...</p>
+        </div>
+      </section>
+
+      <div class="archive-pagination">
+        <button id="archive-load-more" class="button button--outline hidden" type="button">Load More</button>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-top">
+        <div class="footer-column"><p class="eyebrow">BEAUMONT</p><p>Curators of History<br />Fine Books<br />Maps<br />Historical Material</p></div>
+        <div class="footer-column"><h4>Contact</h4><p><a href="mailto:jackgault16@yahoo.co.uk">jackgault16@yahoo.co.uk</a><br /><a href="tel:07549892003">07549 892003</a></p></div>
+        <div class="footer-column"><h4>Navigation</h4><a href="index.html">Home</a><br /><a href="catalogue.html">Catalogue</a><br /><a href="collection-services.html">Collection Services</a><br /><a href="about.html">About</a><br /><a href="journal.html">Journal</a><br /><a href="digital-archive.html">Digital Archive</a><br /><a href="index.html#contact">Contact</a><br /><a class="footer-admin-link" href="admin-login.html">Admin Login</a></div>
+      </div>
+      <div class="footer-bottom"><p>&copy; 2026 Beaumont. All Rights Reserved.</p></div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="script.js?v=20260604-editor-fix"></script>
+  </body>
+</html>

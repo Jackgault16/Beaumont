@@ -15,6 +15,23 @@ const DEFAULT_COLLECTIONS = [
   'Travel Collection',
 ];
 const ACQUISITION_SOURCES = ['Auction', 'Private Collection', 'Estate Sale', 'Dealer', 'Book Fair', 'Direct Purchase'];
+const ARCHIVE_CATEGORIES = [
+  'Rare Books', 'Military History', 'First World War', 'Second World War', 'Maps & Cartography',
+  'Manuscripts', 'Historical Documents', 'Pamphlets', 'Periodicals', 'Archive Material',
+  'Research Notes', 'Estate Libraries', 'Local History', 'Irish History', 'Travel & Exploration',
+];
+const ARCHIVE_FILE_TYPES = ['PDF', 'Scan', 'Image Set', 'JPG', 'PNG', 'WEBP', 'TIFF', 'ZIP'];
+const ARCHIVE_PAGE_SIZE = 12;
+const ARCHIVE_MAX_FILE_SIZE = 500 * 1024 * 1024;
+const ARCHIVE_ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/tiff',
+  'application/zip',
+  'application/x-zip-compressed',
+]);
 const SAMPLE_ARTICLES = [
   {
     id: 'sample-article-maps',
@@ -249,8 +266,10 @@ const state = {
   tags: [],
   collections: [],
   articles: [],
+  archiveItems: [],
   enquiries: [],
   settings: null,
+  archivePage: 1,
   featuredCarousel: {
     items: [],
     index: 0,
@@ -264,6 +283,7 @@ const state = {
   articleEditor: null,
   articleEditorReady: null,
   articleAdditionalImages: [],
+  editingArchiveId: null,
 };
 
 function hasSupabaseConfig() {
@@ -380,6 +400,23 @@ function itemSearchText(item) {
   ].join(' ').toLowerCase();
 }
 
+function sameRecordId(left, right) {
+  return String(left || '') === String(right || '');
+}
+
+function findItemById(id) {
+  return state.items.find((entry) => sameRecordId(entry.id, id));
+}
+
+function parseJsonArray(value) {
+  try {
+    const parsed = JSON.parse(value || '[]');
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 async function loadItems() {
   const client = getClient();
   if (!client) return [];
@@ -428,6 +465,64 @@ async function seedDefaults() {
   if (!client) return;
   await client.from('tags').upsert(DEFAULT_TAGS.map((name) => ({ name })), { onConflict: 'name' });
   await client.from('collections').upsert(DEFAULT_COLLECTIONS.map((name) => ({ name })), { onConflict: 'name' });
+}
+
+function sampleStockTagNames() {
+  return [...new Set(SAMPLE_STOCK.flatMap((item) => itemTags(item)))];
+}
+
+function sampleStockItemPayload(item) {
+  return {
+    title: item.title,
+    reference_number: item.reference_number,
+    category: item.category,
+    subcategory: item.subcategory || '',
+    year: item.year || '',
+    price: item.price,
+    catalogue_description: catalogueDescription(item),
+    physical_details: item.physical_details || '',
+    beaumont_notes: item.beaumont_notes || '',
+    provenance: item.provenance || '',
+    condition: item.condition || '',
+    item_references: item.item_references || '',
+    collection_name: item.collection_name || null,
+    acquisition_source: item.acquisition_source || '',
+    featured: Boolean(item.featured),
+    sold: Boolean(item.sold),
+    archive_reference: Boolean(item.archive_reference),
+    main_image_url: item.main_image_url || '',
+  };
+}
+
+async function seedSampleInventory() {
+  const client = requireClient();
+  const { error: tagSeedError } = await client.from('tags').upsert(sampleStockTagNames().map((name) => ({ name })), { onConflict: 'name' });
+  if (tagSeedError) throw tagSeedError;
+  const collectionRows = [...new Set(SAMPLE_STOCK.map((item) => item.collection_name).filter(Boolean))].map((name) => ({ name }));
+  const { error: collectionSeedError } = await client.from('collections').upsert(collectionRows, { onConflict: 'name' });
+  if (collectionSeedError) throw collectionSeedError;
+
+  const { data: items, error: itemError } = await client
+    .from('items')
+    .insert(SAMPLE_STOCK.map(sampleStockItemPayload))
+    .select('id, reference_number');
+  if (itemError) throw itemError;
+
+  await loadTags();
+  const tagIdByName = new Map(state.tags.map((tag) => [tag.name, tag.id]));
+  const itemIdByReference = new Map((items || []).map((item) => [item.reference_number, item.id]));
+  const tagRows = SAMPLE_STOCK.flatMap((item) => {
+    const itemId = itemIdByReference.get(item.reference_number);
+    if (!itemId) return [];
+    return itemTags(item)
+      .map((name) => tagIdByName.get(name))
+      .filter(Boolean)
+      .map((tag_id) => ({ item_id: itemId, tag_id }));
+  });
+  if (tagRows.length) {
+    const { error: tagError } = await client.from('item_tags').insert(tagRows);
+    if (tagError) throw tagError;
+  }
 }
 
 function optionList(values, placeholder) {
@@ -512,7 +607,7 @@ function featuredPerView() {
 function featuredMaxIndex(perView) {
   const count = state.featuredCarousel.items.length;
   if (count <= perView) return 0;
-  return perView === 3 ? Math.floor((count - 1) / 3) * 3 : count - perView;
+  return count - perView;
 }
 
 function updateFeaturedCarousel() {
@@ -538,8 +633,7 @@ function updateFeaturedCarousel() {
 function moveFeaturedCarousel(direction) {
   const perView = state.featuredCarousel.perView || featuredPerView();
   const maxIndex = featuredMaxIndex(perView);
-  const step = perView === 3 ? 3 : 1;
-  state.featuredCarousel.index = Math.max(0, Math.min(maxIndex, state.featuredCarousel.index + direction * step));
+  state.featuredCarousel.index = Math.max(0, Math.min(maxIndex, state.featuredCarousel.index + direction));
   updateFeaturedCarousel();
 }
 
@@ -564,26 +658,24 @@ async function initHomepageInventory() {
   if (!grid) return;
   try {
     if (getClient()) await loadItems();
-    const featured = newestItems(state.items.filter((item) => item.featured && !item.sold)).slice(0, 9);
-    renderFeaturedCarousel(featured.length ? featured : SAMPLE_STOCK.slice(0, 9));
+    const available = newestItems(state.items.filter((item) => !item.sold && !item.archive_reference));
+    const displayItems = available.slice(0, 9);
+    renderFeaturedCarousel(displayItems.length ? displayItems : SAMPLE_STOCK.slice(0, 9));
   } catch (error) {
     renderFeaturedCarousel(SAMPLE_STOCK.slice(0, 9));
   }
 }
 
-function renderCatalogueCard(item, index = 0) {
+function renderCatalogueCard(item) {
   const image = realItemImage(item);
-  const tags = itemTags(item);
   const description = plainTextExcerpt(catalogueDescription(item), 180);
-  const featured = index === 0;
   return `
-    <article class="catalogue-item${featured ? ' catalogue-item--featured' : ''}">
+    <article class="catalogue-item">
       <a class="catalogue-item__image${image ? '' : ' catalogue-item__image--empty'}" href="catalogue.html?item=${item.id}">
         ${cataloguePlaceholder()}
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.remove();" />` : ''}
       </a>
       <div class="catalogue-item__content">
-        ${featured ? '<p class="catalogue-item__feature-label">Featured Object</p>' : ''}
         <div class="catalogue-item__title">${escapeHtml(item.title)}</div>
         <div class="catalogue-item__meta">${escapeHtml(item.reference_number)} · ${escapeHtml(item.category)}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</div>
         <div class="catalogue-item__price">${formatPrice(item.price)}</div>
@@ -591,7 +683,6 @@ function renderCatalogueCard(item, index = 0) {
         <div class="catalogue-item__details">
           ${item.collection_name ? `<p><strong>Collection:</strong> ${escapeHtml(item.collection_name)}</p>` : ''}
           <p><strong>Availability:</strong> ${escapeHtml(availabilityLabel(item))}</p>
-          ${featured && tags.length ? `<p><strong>Tags:</strong> ${tags.map(escapeHtml).join(', ')}</p>` : ''}
         </div>
         <a href="catalogue.html?item=${item.id}" class="button--enquire">View Object</a>
       </div>
@@ -634,7 +725,7 @@ function renderCatalogueItems() {
   const items = filteredCatalogueItems();
   if (count) count.textContent = `${items.length} object${items.length === 1 ? '' : 's'}`;
   grid.innerHTML = items.length
-    ? items.map((item, index) => renderCatalogueCard(item, index)).join('')
+    ? items.map((item) => renderCatalogueCard(item)).join('')
     : '<div class="catalogue-empty" style="grid-column:1/-1;"><p>No items match these filters.</p></div>';
 }
 
@@ -759,7 +850,7 @@ async function initCataloguePage() {
     const params = new URLSearchParams(window.location.search);
     const itemId = params.get('item');
     if (itemId) {
-      const item = state.items.find((entry) => entry.id === itemId) || SAMPLE_STOCK.find((entry) => entry.id === itemId);
+      const item = findItemById(itemId) || SAMPLE_STOCK.find((entry) => sameRecordId(entry.id, itemId));
       if (item) renderItemDetail(item);
       return;
     }
@@ -782,10 +873,15 @@ function fillAdminOptions() {
   const category = document.getElementById('category');
   const collection = document.getElementById('collection-name');
   const acquisition = document.getElementById('acquisition-source');
+  const archiveCategory = document.getElementById('archive-category');
+  const archiveFileType = document.getElementById('archive-file-type');
   if (category) category.innerHTML = optionList(DEFAULT_CATEGORIES, 'Select category');
   if (collection) collection.innerHTML = optionList(state.collections.map((item) => item.name), 'Select collection');
   if (acquisition) acquisition.innerHTML = optionList(ACQUISITION_SOURCES, 'Select acquisition source');
+  if (archiveCategory) archiveCategory.innerHTML = optionList(ARCHIVE_CATEGORIES, 'Select category');
+  if (archiveFileType) archiveFileType.innerHTML = ARCHIVE_FILE_TYPES.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
   fillArticleTagSelect(selectedArticleTags());
+  fillArchiveTagChecklist(selectedArchiveTags());
 }
 
 function fillTagChecklist() {
@@ -801,6 +897,23 @@ function fillTagChecklist() {
 
 function selectedTagIds() {
   return [...document.querySelectorAll('input[name="tags"]:checked')].map((input) => input.value);
+}
+
+function fillArchiveTagChecklist(selected = []) {
+  const wrap = document.getElementById('archive-tag-checklist');
+  if (!wrap) return;
+  const selectedSet = new Set(normalizeTagValues(selected));
+  const values = [...new Set([...state.tags.map((tag) => tag.name).filter(Boolean), ...DEFAULT_TAGS, ...selectedSet])].sort((a, b) => a.localeCompare(b));
+  wrap.innerHTML = values.map((tag) => `
+    <label class="check-pill">
+      <input type="checkbox" name="archive-tags" value="${escapeHtml(tag)}"${selectedSet.has(tag) ? ' checked' : ''} />
+      <span>${escapeHtml(tag)}</span>
+    </label>
+  `).join('');
+}
+
+function selectedArchiveTags() {
+  return [...document.querySelectorAll('input[name="archive-tags"]:checked')].map((input) => input.value).filter(Boolean);
 }
 
 function createUploadId() {
@@ -827,11 +940,58 @@ async function uploadFile(file, folder) {
   return client.storage.from(CONFIG.imageBucket).getPublicUrl(path).data.publicUrl;
 }
 
+function archiveBucket() {
+  return CONFIG.archiveBucket || 'digital-archive';
+}
+
+function archiveFileTypeFromFile(file) {
+  const name = String(file?.name || '').toLowerCase();
+  if (file?.type === 'application/pdf' || name.endsWith('.pdf')) return 'PDF';
+  if (name.endsWith('.zip')) return 'ZIP';
+  if (name.endsWith('.tif') || name.endsWith('.tiff')) return 'TIFF';
+  if (name.endsWith('.webp')) return 'WEBP';
+  if (name.endsWith('.png')) return 'PNG';
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'JPG';
+  return 'FILE';
+}
+
+function validateArchiveFile(file, thumbnail = false) {
+  if (!file) return;
+  if (file.size > ARCHIVE_MAX_FILE_SIZE) throw new Error('File too large. Digital Archive uploads are limited to 500 MB.');
+  if (thumbnail && !String(file.type || '').startsWith('image/')) throw new Error('Unsupported thumbnail type. Please upload an image file.');
+  if (!thumbnail && !ARCHIVE_ALLOWED_MIME_TYPES.has(file.type) && !/\.(pdf|jpe?g|png|webp|tiff?|zip)$/i.test(file.name)) {
+    throw new Error('Unsupported file type. Use PDF, JPG, PNG, WEBP, TIFF or ZIP.');
+  }
+}
+
+async function uploadArchiveStorageFile(file, folder) {
+  validateArchiveFile(file, folder === 'thumbnails');
+  const client = requireClient();
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw new Error(`Upload failed: ${sessionError.message}`);
+  if (!sessionData?.session) throw new Error('Upload failed: admin session not found. Please log in again.');
+  const ext = file.name.split('.').pop();
+  const path = `${folder}/${createUploadId()}.${ext}`;
+  const { error } = await client.storage.from(archiveBucket()).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+  });
+  if (error) throw new Error(`Upload failed: ${error.message}`);
+  const publicUrl = client.storage.from(archiveBucket()).getPublicUrl(path).data.publicUrl;
+  return { url: publicUrl, path, name: file.name, size: file.size, type: archiveFileTypeFromFile(file) };
+}
+
+async function removeArchiveStoragePaths(paths = []) {
+  const filtered = paths.filter(Boolean);
+  if (!filtered.length) return;
+  await requireClient().storage.from(archiveBucket()).remove(filtered);
+}
+
 async function uploadImagePayload() {
   const mainInput = document.getElementById('main-image');
   const galleryInput = document.getElementById('gallery-images');
   const currentMain = document.getElementById('current-main-image')?.value || '';
-  const currentGallery = JSON.parse(document.getElementById('current-gallery-images')?.value || '[]');
+  const currentGallery = parseJsonArray(document.getElementById('current-gallery-images')?.value || '[]');
   const removeMain = document.getElementById('remove-main-image')?.checked || false;
   const replaceGallery = document.getElementById('replace-gallery-images')?.checked || false;
   const clearGallery = document.getElementById('clear-gallery-images')?.checked || false;
@@ -859,7 +1019,7 @@ function itemPayload(main_image_url) {
     item_references: document.getElementById('references').value.trim(),
     collection_name: document.getElementById('collection-name').value,
     acquisition_source: document.getElementById('acquisition-source').value,
-    featured: document.getElementById('featured').checked,
+    featured: false,
     sold: document.getElementById('sold').checked,
     archive_reference: document.getElementById('archive-reference')?.checked || false,
     main_image_url,
@@ -877,10 +1037,14 @@ async function saveItem(event) {
     const { main_image_url, galleryUrls } = await uploadImagePayload();
     let itemId = state.editingItemId;
     if (itemId) {
-      const { error } = await client.from('items').update(itemPayload(main_image_url)).eq('id', itemId);
+      const { data, error } = await client.from('items').update(itemPayload(main_image_url)).eq('id', itemId).select('id').maybeSingle();
       if (error) throw error;
-      await client.from('item_images').delete().eq('item_id', itemId);
-      await client.from('item_tags').delete().eq('item_id', itemId);
+      if (!data) throw new Error('Object could not be updated because it no longer exists in the database.');
+      let relationError;
+      ({ error: relationError } = await client.from('item_images').delete().eq('item_id', itemId));
+      if (relationError) throw relationError;
+      ({ error: relationError } = await client.from('item_tags').delete().eq('item_id', itemId));
+      if (relationError) throw relationError;
     } else {
       const { data, error } = await client.from('items').insert(itemPayload(main_image_url)).select('id').single();
       if (error) throw error;
@@ -926,16 +1090,14 @@ function renderInventory() {
   const query = (document.getElementById('inventory-search')?.value || '').toLowerCase().trim();
   const items = query ? state.items.filter((item) => itemSearchText(item).includes(query)) : state.items;
   container.innerHTML = items.length ? items.map((item) => `
-    <article class="admin-row">
+    <article class="admin-row admin-row--inventory">
       <div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.reference_number)} · ${escapeHtml(item.category)}</span></div>
       <div>${formatPrice(item.price)}</div>
       <div><span class="status-pill">${item.archive_reference ? 'Archived' : item.sold ? 'Sold' : 'Available'}</span></div>
-      <div>${item.featured ? 'Featured' : 'Standard'}</div>
       <div class="admin-row__actions">
         <button type="button" class="button button--secondary" data-edit-item="${item.id}">Edit</button>
         <button type="button" class="button button--ghost" data-toggle-sold="${item.id}">${item.sold ? 'Mark Available' : 'Mark Sold'}</button>
         <button type="button" class="button button--ghost" data-toggle-archive="${item.id}">${item.archive_reference ? 'Unarchive' : 'Archive'}</button>
-        <button type="button" class="button button--ghost" data-toggle-featured="${item.id}">${item.featured ? 'Unfeature' : 'Feature'}</button>
         <button type="button" class="button button--danger" data-delete-item="${item.id}">Delete</button>
       </div>
     </article>
@@ -976,7 +1138,6 @@ function populateItemForm(item) {
   document.getElementById('references').value = item.item_references || '';
   document.getElementById('collection-name').value = item.collection_name || '';
   document.getElementById('acquisition-source').value = item.acquisition_source || '';
-  document.getElementById('featured').checked = Boolean(item.featured);
   document.getElementById('sold').checked = Boolean(item.sold);
   document.getElementById('archive-reference').checked = Boolean(item.archive_reference);
   document.getElementById('current-main-image').value = item.main_image_url || '';
@@ -992,8 +1153,9 @@ function populateItemForm(item) {
 }
 
 async function updateItem(id, payload) {
-  const { error } = await requireClient().from('items').update(payload).eq('id', id);
+  const { data, error } = await requireClient().from('items').update(payload).eq('id', id).select('id').maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Object could not be updated because it was not found in the database.');
   await loadItems();
   renderInventory();
   renderSoldItems();
@@ -1003,8 +1165,9 @@ async function updateItem(id, payload) {
 
 async function deleteItem(id) {
   if (!window.confirm('Delete this object permanently?')) return;
-  const { error } = await requireClient().from('items').delete().eq('id', id);
+  const { data, error } = await requireClient().from('items').delete().eq('id', id).select('id').maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Object could not be deleted because it was not found in the database.');
   await loadItems();
   renderInventory();
   renderSoldItems();
@@ -1052,6 +1215,272 @@ async function loadArticles(includeUnpublished = false) {
   }
   state.articles = data && data.length ? data : SAMPLE_ARTICLES;
   return state.articles;
+}
+
+async function loadArchiveItems(includeUnpublished = false) {
+  const client = getClient();
+  if (!client) return [];
+  let query = client
+    .from('digital_archive_items')
+    .select('*')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false });
+  if (!includeUnpublished) query = query.eq('is_published', true);
+  const { data, error } = await query;
+  if (error) throw error;
+  state.archiveItems = data || [];
+  return state.archiveItems;
+}
+
+function archiveTags(item) {
+  return Array.isArray(item.tags) ? item.tags.map((tag) => String(tag || '').trim()).filter(Boolean) : normalizeTagValues(item.tags);
+}
+
+function archiveDescription(item) {
+  return cleanText(item.short_description) || plainTextExcerpt(item.description, 190);
+}
+
+function archiveFileType(item) {
+  return cleanText(item.file_type).toUpperCase() || 'FILE';
+}
+
+function formatFileSize(bytes) {
+  const size = Number(bytes || 0);
+  if (!size) return '';
+  if (size >= 1024 * 1024 * 1024) return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  if (size >= 1024) return `${Math.round(size / 1024)} KB`;
+  return `${size} B`;
+}
+
+function archivePublicUrl(item) {
+  return cleanText(item.file_url);
+}
+
+function archiveDownloadAttributes(item) {
+  if (!item.allow_download || !archivePublicUrl(item)) return ' aria-disabled="true" tabindex="-1"';
+  return ` href="${escapeHtml(archivePublicUrl(item))}" download="${escapeHtml(item.file_name || item.title || 'digital-archive-file')}"`;
+}
+
+function archiveSearchText(item) {
+  return [
+    item.title,
+    item.description,
+    item.short_description,
+    item.author_creator,
+    item.publisher_source,
+    item.category,
+    item.sub_category,
+    item.date_year,
+    archiveFileType(item),
+    ...archiveTags(item),
+  ].join(' ').toLowerCase();
+}
+
+function archiveFilterOptions() {
+  const categories = [...new Set([...ARCHIVE_CATEGORIES, ...state.archiveItems.map((item) => item.category).filter(Boolean)])];
+  const dates = [...new Set(state.archiveItems.map((item) => item.date_year).filter(Boolean))].sort((a, b) => String(b).localeCompare(String(a)));
+  const tags = [...new Set(state.archiveItems.flatMap(archiveTags))].sort((a, b) => a.localeCompare(b));
+  const fileTypes = [...new Set([...ARCHIVE_FILE_TYPES, ...state.archiveItems.map(archiveFileType).filter(Boolean)])];
+  return { categories, dates, tags, fileTypes };
+}
+
+function renderArchiveFilters() {
+  const category = document.getElementById('archive-filter-category');
+  const date = document.getElementById('archive-filter-date');
+  const tag = document.getElementById('archive-filter-tag');
+  const fileType = document.getElementById('archive-filter-file-type');
+  const options = archiveFilterOptions();
+  if (category) category.innerHTML = optionList(options.categories, 'All categories');
+  if (date) date.innerHTML = optionList(options.dates, 'All dates');
+  if (tag) tag.innerHTML = optionList(options.tags, 'All tags');
+  if (fileType) fileType.innerHTML = optionList(options.fileTypes, 'All file types');
+}
+
+function filteredArchiveItems() {
+  const query = (document.getElementById('archive-search')?.value || '').toLowerCase().trim();
+  const category = document.getElementById('archive-filter-category')?.value || '';
+  const date = document.getElementById('archive-filter-date')?.value || '';
+  const tag = document.getElementById('archive-filter-tag')?.value || '';
+  const fileType = document.getElementById('archive-filter-file-type')?.value || '';
+  const sort = document.getElementById('archive-sort')?.value || 'featured';
+  const items = state.archiveItems.filter((item) => (
+    (!query || archiveSearchText(item).includes(query)) &&
+    (!category || item.category === category) &&
+    (!date || item.date_year === date) &&
+    (!tag || archiveTags(item).includes(tag)) &&
+    (!fileType || archiveFileType(item) === fileType)
+  ));
+  return items.sort((a, b) => {
+    if (sort === 'title') return String(a.title || '').localeCompare(String(b.title || ''));
+    if (sort === 'date') return String(b.date_year || '').localeCompare(String(a.date_year || ''));
+    if (sort === 'newest') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    const featuredDiff = Number(Boolean(b.is_featured)) - Number(Boolean(a.is_featured));
+    if (featuredDiff) return featuredDiff;
+    const orderDiff = Number(a.sort_order || 0) - Number(b.sort_order || 0);
+    return orderDiff || new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+}
+
+function archivePlaceholder(className = '') {
+  return `
+    <div class="beaumont-image-placeholder archive-placeholder ${className}">
+      <span>DIGITAL ARCHIVE</span>
+      <strong>BEAUMONT</strong>
+      <small>Research Library</small>
+    </div>
+  `;
+}
+
+function archiveCard(item) {
+  const thumbnail = cleanText(item.thumbnail_url);
+  const description = archiveDescription(item);
+  const tags = archiveTags(item).slice(0, 4);
+  const fileUrl = archivePublicUrl(item);
+  return `
+    <article class="archive-card catalogue-item">
+      <a class="archive-card__media catalogue-item__image${thumbnail ? '' : ' catalogue-item__image--empty'}" href="digital-archive-item.html?id=${encodeURIComponent(item.id)}">
+        ${thumbnail ? `<img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(item.title)} thumbnail" loading="lazy" onerror="this.remove();" />` : archivePlaceholder()}
+        <span class="archive-file-badge">${escapeHtml(archiveFileType(item))}</span>
+      </a>
+      <div class="archive-card__content catalogue-item__content">
+        <div class="catalogue-item__title">${escapeHtml(item.title)}</div>
+        <div class="catalogue-item__meta">${escapeHtml([item.category, item.sub_category, item.date_year].filter(Boolean).join(' · '))}</div>
+        ${description ? `<p class="catalogue-item__desc">${escapeHtml(description)}</p>` : ''}
+        ${tags.length ? `<div class="archive-tag-list">${tags.map((tagName) => `<span>${escapeHtml(tagName)}</span>`).join('')}</div>` : ''}
+        <div class="archive-card__actions">
+          <a class="button--enquire" href="digital-archive-item.html?id=${encodeURIComponent(item.id)}">View</a>
+          ${fileUrl && item.allow_download ? `<a class="button--enquire button--archive-secondary" href="${escapeHtml(fileUrl)}" download="${escapeHtml(item.file_name || item.title || 'digital-archive-file')}">Download</a>` : ''}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderArchiveItems(resetPage = true) {
+  const grid = document.getElementById('archive-grid');
+  const count = document.getElementById('archive-count');
+  const loadMore = document.getElementById('archive-load-more');
+  if (!grid) return;
+  if (resetPage) state.archivePage = 1;
+  const items = filteredArchiveItems();
+  const visible = items.slice(0, state.archivePage * ARCHIVE_PAGE_SIZE);
+  if (count) count.textContent = `${items.length} archive item${items.length === 1 ? '' : 's'}`;
+  grid.innerHTML = visible.length
+    ? visible.map(archiveCard).join('')
+    : '<div class="catalogue-empty" style="grid-column:1/-1;"><p>The Digital Archive is currently being prepared. Selected digitised material will be added for research and reference.</p></div>';
+  if (loadMore) {
+    loadMore.classList.toggle('hidden', visible.length >= items.length);
+    loadMore.textContent = `Load More (${Math.max(0, items.length - visible.length)} remaining)`;
+  }
+}
+
+async function initDigitalArchivePage() {
+  const grid = document.getElementById('archive-grid');
+  if (!grid) return;
+  try {
+    if (!getClient()) throw new Error(supabaseRequiredMessage());
+    await loadArchiveItems(false);
+    renderArchiveFilters();
+    renderArchiveItems(true);
+    document.querySelectorAll('[data-archive-filter]').forEach((field) => {
+      field.addEventListener('input', () => renderArchiveItems(true));
+      field.addEventListener('change', () => renderArchiveItems(true));
+    });
+    document.getElementById('archive-clear-filters')?.addEventListener('click', () => {
+      document.querySelectorAll('[data-archive-filter]').forEach((field) => {
+        field.value = field.id === 'archive-sort' ? 'featured' : '';
+      });
+      renderArchiveItems(true);
+    });
+    document.getElementById('archive-load-more')?.addEventListener('click', () => {
+      state.archivePage += 1;
+      renderArchiveItems(false);
+    });
+  } catch (error) {
+    state.archiveItems = [];
+    renderArchiveFilters();
+    grid.innerHTML = '<div class="catalogue-empty" style="grid-column:1/-1;"><p>The Digital Archive is currently being prepared. Selected digitised material will be added for research and reference.</p></div>';
+    const count = document.getElementById('archive-count');
+    if (count) count.textContent = '0 archive items';
+  }
+}
+
+function archiveDetailRow(label, value) {
+  return value ? `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>` : '';
+}
+
+function renderArchiveDetail(item) {
+  const detail = document.getElementById('archive-detail');
+  if (!detail) return;
+  const fileUrl = archivePublicUrl(item);
+  const thumbnail = cleanText(item.thumbnail_url);
+  const related = state.archiveItems
+    .filter((entry) => entry.id !== item.id && (entry.category === item.category || archiveTags(entry).some((tag) => archiveTags(item).includes(tag))))
+    .slice(0, 3);
+  detail.innerHTML = `
+    <a class="catalogue-back" href="digital-archive.html">Back to Digital Archive</a>
+    <article class="item-detail archive-detail">
+      <div class="item-detail__media">
+        <div class="item-detail__viewer">
+          <div class="item-detail__main archive-detail__media">
+            ${thumbnail ? `<img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(item.title)} thumbnail" />` : archivePlaceholder('beaumont-image-placeholder--large')}
+            <span class="archive-file-badge">${escapeHtml(archiveFileType(item))}</span>
+          </div>
+        </div>
+      </div>
+      <div class="item-detail__content">
+        <p class="eyebrow">Digital Archive</p>
+        <h2>${escapeHtml(item.title)}</h2>
+        <div class="item-detail__summary">
+          <p class="item-detail__meta">${escapeHtml([item.category, item.sub_category, item.date_year].filter(Boolean).join(' · '))}</p>
+        </div>
+        <div class="item-detail__sections">
+          <section class="item-detail__section">
+            <h3>Archive Description</h3>
+            ${item.description ? markdownToHtml(item.description) : '<p>Description pending.</p>'}
+          </section>
+          <section class="item-detail__section">
+            <h3>File Details</h3>
+            ${archiveDetailRow('Author / Creator', item.author_creator)}
+            ${archiveDetailRow('Publisher / Source', item.publisher_source)}
+            ${archiveDetailRow('File Type', archiveFileType(item))}
+            ${archiveDetailRow('File Name', item.file_name)}
+            ${archiveDetailRow('File Size', formatFileSize(item.file_size))}
+            ${archiveTags(item).length ? `<p><strong>Tags:</strong> ${archiveTags(item).map(escapeHtml).join(', ')}</p>` : ''}
+          </section>
+        </div>
+        <div class="archive-detail__actions">
+          ${fileUrl ? `<a class="button button--primary" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener">View ${escapeHtml(archiveFileType(item))}</a>` : ''}
+          ${fileUrl && item.allow_download ? `<a class="button button--secondary" ${archiveDownloadAttributes(item)}>Download ${escapeHtml(archiveFileType(item))}</a>` : ''}
+        </div>
+      </div>
+    </article>
+    ${related.length ? `
+      <section class="archive-related">
+        <h2>Related Archive Items</h2>
+        <div class="archive-grid catalogue-grid">${related.map(archiveCard).join('')}</div>
+      </section>
+    ` : ''}
+  `;
+}
+
+async function initDigitalArchiveDetailPage() {
+  const detail = document.getElementById('archive-detail');
+  if (!detail) return;
+  try {
+    if (!getClient()) throw new Error(supabaseRequiredMessage());
+    await loadArchiveItems(false);
+    const id = new URLSearchParams(window.location.search).get('id');
+    const item = state.archiveItems.find((entry) => sameRecordId(entry.id, id));
+    if (!item) {
+      detail.innerHTML = '<div class="catalogue-empty"><p>This Digital Archive item is not currently available.</p></div>';
+      return;
+    }
+    renderArchiveDetail(item);
+  } catch (error) {
+    detail.innerHTML = '<div class="catalogue-empty"><p>This Digital Archive item is not currently available.</p></div>';
+  }
 }
 
 async function loadEnquiries() {
@@ -1577,10 +2006,11 @@ async function saveArticle(event) {
     const featuredImageUrl = await uploadArticleImagePayload();
     const additionalImageUrls = await uploadArticleAdditionalImagesPayload();
     const request = id
-      ? client.from('journal_articles').update(articlePayload(featuredImageUrl, additionalImageUrls)).eq('id', id)
-      : client.from('journal_articles').insert(articlePayload(featuredImageUrl, additionalImageUrls));
-    const { error } = await request;
+      ? client.from('journal_articles').update(articlePayload(featuredImageUrl, additionalImageUrls)).eq('id', id).select('id').maybeSingle()
+      : client.from('journal_articles').insert(articlePayload(featuredImageUrl, additionalImageUrls)).select('id').single();
+    const { data, error } = await request;
     if (error) throw error;
+    if (!data) throw new Error('Article could not be saved because it was not found in the database.');
     resetArticleForm();
     await loadArticles(true);
     renderAdminArticles();
@@ -1638,8 +2068,9 @@ function populateArticleForm(article) {
 
 async function updateArticle(id, payload) {
   if (!isUuid(id)) throw new Error('Sample articles cannot be updated directly. Use as Draft, then save to create a real article.');
-  const { error } = await requireClient().from('journal_articles').update(payload).eq('id', id);
+  const { data, error } = await requireClient().from('journal_articles').update(payload).eq('id', id).select('id').maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Article could not be updated because it was not found in the database.');
   await loadArticles(true);
   renderAdminArticles();
   renderAdminCounts();
@@ -1651,12 +2082,193 @@ async function deleteArticle(id) {
     return;
   }
   if (!window.confirm('Delete this article?')) return;
-  const { error } = await requireClient().from('journal_articles').delete().eq('id', id);
+  const { data, error } = await requireClient().from('journal_articles').delete().eq('id', id).select('id').maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Article could not be deleted because it was not found in the database.');
   await loadArticles(true);
   renderAdminArticles();
   renderAdminCounts();
   setStatus('Article deleted successfully.', 'success');
+}
+
+function archivePayload(fileData, thumbnailData) {
+  return {
+    title: document.getElementById('archive-title').value.trim(),
+    category: document.getElementById('archive-category').value,
+    sub_category: document.getElementById('archive-sub-category').value.trim(),
+    author_creator: document.getElementById('archive-author').value.trim(),
+    publisher_source: document.getElementById('archive-publisher').value.trim(),
+    date_year: document.getElementById('archive-date-year').value.trim(),
+    description: document.getElementById('archive-description').value.trim(),
+    short_description: document.getElementById('archive-short-description').value.trim(),
+    tags: selectedArchiveTags(),
+    file_type: document.getElementById('archive-file-type').value || fileData.type || 'PDF',
+    file_name: fileData.name || document.getElementById('current-archive-file-name').value || '',
+    file_size: fileData.size || Number(document.getElementById('current-archive-file-size').value || 0) || null,
+    file_url: fileData.url || document.getElementById('current-archive-file-url').value || '',
+    storage_path: fileData.path || document.getElementById('current-archive-storage-path').value || '',
+    thumbnail_url: thumbnailData.url,
+    thumbnail_storage_path: thumbnailData.path,
+    is_published: document.getElementById('archive-published').checked,
+    is_featured: document.getElementById('archive-featured').checked,
+    allow_download: document.getElementById('archive-allow-download').checked,
+    sort_order: Number(document.getElementById('archive-sort-order').value || 0),
+  };
+}
+
+async function archiveUploadPayload() {
+  const fileInput = document.getElementById('archive-file');
+  const thumbInput = document.getElementById('archive-thumbnail');
+  const removeThumbnail = document.getElementById('remove-archive-thumbnail')?.checked || false;
+  const currentThumbnailUrl = document.getElementById('current-archive-thumbnail-url')?.value || '';
+  const currentThumbnailPath = document.getElementById('current-archive-thumbnail-path')?.value || '';
+  const uploaded = [];
+  let fileData = {};
+  let thumbnailData = removeThumbnail ? { url: '', path: '' } : { url: currentThumbnailUrl, path: currentThumbnailPath };
+  if (fileInput?.files?.[0]) {
+    setStatus('Uploading archive file...');
+    fileData = await uploadArchiveStorageFile(fileInput.files[0], 'files');
+    uploaded.push(fileData.path);
+  }
+  if (thumbInput?.files?.[0]) {
+    setStatus('Uploading archive thumbnail...');
+    thumbnailData = await uploadArchiveStorageFile(thumbInput.files[0], 'thumbnails');
+    uploaded.push(thumbnailData.path);
+  }
+  return { fileData, thumbnailData, uploaded };
+}
+
+async function saveArchiveItem(event) {
+  event.preventDefault();
+  const client = requireClient();
+  const uploaded = [];
+  try {
+    const title = document.getElementById('archive-title').value.trim();
+    const category = document.getElementById('archive-category').value;
+    const published = document.getElementById('archive-published').checked;
+    const hasCurrentFile = Boolean(document.getElementById('current-archive-file-url').value);
+    const hasNewFile = Boolean(document.getElementById('archive-file')?.files?.[0]);
+    if (!title) throw new Error('Missing title. Digital Archive items require a title.');
+    if (!category) throw new Error('Missing category. Please select an archive category.');
+    if (published && !hasCurrentFile && !hasNewFile) throw new Error('Missing file. Published archive items require an uploaded file.');
+    setStatus('Saving Digital Archive item...');
+    const uploadPayload = await archiveUploadPayload();
+    uploaded.push(...uploadPayload.uploaded);
+    const payload = archivePayload(uploadPayload.fileData, uploadPayload.thumbnailData);
+    const id = document.getElementById('archive-id').value.trim();
+    const request = id
+      ? client.from('digital_archive_items').update(payload).eq('id', id).select('id').maybeSingle()
+      : client.from('digital_archive_items').insert(payload).select('id').single();
+    const { data, error } = await request;
+    if (error) throw new Error(`Database save failed: ${error.message}`);
+    if (!data) throw new Error('Database save failed: archive item was not found.');
+    const oldFile = document.getElementById('current-archive-storage-path').value;
+    const oldThumb = document.getElementById('current-archive-thumbnail-path').value;
+    const newFile = uploadPayload.fileData.path;
+    const newThumb = uploadPayload.thumbnailData.path;
+    const removeThumb = document.getElementById('remove-archive-thumbnail')?.checked || false;
+    await removeArchiveStoragePaths([
+      newFile && oldFile !== newFile ? oldFile : '',
+      (newThumb && oldThumb !== newThumb) || removeThumb ? oldThumb : '',
+    ]);
+    resetArchiveForm();
+    await loadArchiveItems(true);
+    renderAdminArchiveItems();
+    renderAdminCounts();
+    setStatus('Digital Archive item saved successfully.', 'success');
+  } catch (error) {
+    await removeArchiveStoragePaths(uploaded);
+    setStatus(error.message, 'error');
+  }
+}
+
+function resetArchiveForm() {
+  state.editingArchiveId = null;
+  document.getElementById('archive-form')?.reset();
+  ['archive-id', 'current-archive-file-url', 'current-archive-storage-path', 'current-archive-file-name', 'current-archive-file-size', 'current-archive-thumbnail-url', 'current-archive-thumbnail-path'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+  if (document.getElementById('archive-allow-download')) document.getElementById('archive-allow-download').checked = true;
+  if (document.getElementById('archive-sort-order')) document.getElementById('archive-sort-order').value = '0';
+  if (document.getElementById('remove-archive-thumbnail')) document.getElementById('remove-archive-thumbnail').checked = false;
+  document.getElementById('archive-current-file').textContent = 'No archive file selected.';
+  document.getElementById('archive-submit-label').textContent = 'Create Archive Item';
+  fillArchiveTagChecklist([]);
+}
+
+function populateArchiveForm(item) {
+  showAdminSection('digital-archive');
+  state.editingArchiveId = item.id;
+  document.getElementById('archive-id').value = item.id;
+  document.getElementById('archive-title').value = item.title || '';
+  document.getElementById('archive-category').value = item.category || '';
+  document.getElementById('archive-sub-category').value = item.sub_category || '';
+  document.getElementById('archive-author').value = item.author_creator || '';
+  document.getElementById('archive-publisher').value = item.publisher_source || '';
+  document.getElementById('archive-date-year').value = item.date_year || '';
+  document.getElementById('archive-description').value = item.description || '';
+  document.getElementById('archive-short-description').value = item.short_description || '';
+  document.getElementById('archive-file-type').value = item.file_type || 'PDF';
+  document.getElementById('archive-sort-order').value = item.sort_order || 0;
+  document.getElementById('archive-published').checked = Boolean(item.is_published);
+  document.getElementById('archive-featured').checked = Boolean(item.is_featured);
+  document.getElementById('archive-allow-download').checked = item.allow_download !== false;
+  document.getElementById('current-archive-file-url').value = item.file_url || '';
+  document.getElementById('current-archive-storage-path').value = item.storage_path || '';
+  document.getElementById('current-archive-file-name').value = item.file_name || '';
+  document.getElementById('current-archive-file-size').value = item.file_size || '';
+  document.getElementById('current-archive-thumbnail-url').value = item.thumbnail_url || '';
+  document.getElementById('current-archive-thumbnail-path').value = item.thumbnail_storage_path || '';
+  document.getElementById('archive-current-file').textContent = item.file_name ? `Current file: ${item.file_name}${item.file_size ? ` (${formatFileSize(item.file_size)})` : ''}` : 'No archive file selected.';
+  document.getElementById('remove-archive-thumbnail').checked = false;
+  fillArchiveTagChecklist(item.tags || []);
+  document.getElementById('archive-submit-label').textContent = 'Update Archive Item';
+  document.getElementById('archive-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderAdminArchiveItems() {
+  const container = document.getElementById('archive-admin-container');
+  if (!container) return;
+  const query = (document.getElementById('archive-admin-search')?.value || '').toLowerCase().trim();
+  const items = query ? state.archiveItems.filter((item) => archiveSearchText(item).includes(query)) : state.archiveItems;
+  container.innerHTML = items.length ? items.map((item) => `
+    <article class="admin-row admin-row--archive">
+      <div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml([item.category, item.date_year].filter(Boolean).join(' · '))}</span></div>
+      <div>${escapeHtml(archiveFileType(item))}</div>
+      <div><span class="status-pill">${item.is_published ? 'Published' : 'Draft'}</span></div>
+      <div>${item.is_featured ? 'Featured' : 'Standard'}<span>${item.allow_download ? 'Download on' : 'View only'}</span></div>
+      <div class="admin-row__actions">
+        <button class="button button--secondary" type="button" data-edit-archive="${item.id}">Edit</button>
+        <button class="button button--ghost" type="button" data-toggle-archive-published="${item.id}">${item.is_published ? 'Unpublish' : 'Publish'}</button>
+        <button class="button button--ghost" type="button" data-toggle-archive-featured="${item.id}">${item.is_featured ? 'Unfeature' : 'Feature'}</button>
+        <button class="button button--danger" type="button" data-delete-archive="${item.id}">Delete</button>
+      </div>
+    </article>
+  `).join('') : '<p class="admin-empty">No Digital Archive items found.</p>';
+}
+
+async function updateArchiveItem(id, payload) {
+  const { data, error } = await requireClient().from('digital_archive_items').update(payload).eq('id', id).select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Archive item could not be updated because it was not found.');
+  await loadArchiveItems(true);
+  renderAdminArchiveItems();
+  renderAdminCounts();
+}
+
+async function deleteArchiveItem(id) {
+  const item = state.archiveItems.find((entry) => sameRecordId(entry.id, id));
+  if (!item) throw new Error('Archive item could not be found.');
+  if (!window.confirm('Delete this Digital Archive item?')) return;
+  const { data, error } = await requireClient().from('digital_archive_items').delete().eq('id', id).select('id').maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Archive item could not be deleted because it was not found.');
+  await removeArchiveStoragePaths([item.storage_path, item.thumbnail_storage_path]);
+  await loadArchiveItems(true);
+  renderAdminArchiveItems();
+  renderAdminCounts();
+  setStatus('Digital Archive item deleted successfully.', 'success');
 }
 
 function renderEnquiryCard(enquiry) {
@@ -1720,14 +2332,14 @@ function renderAdminCounts() {
   const container = document.getElementById('admin-counts');
   if (!container) return;
   const activeInventory = state.items.filter((item) => !item.sold).length;
-  const featuredItems = state.items.filter((item) => item.featured && !item.sold).length;
   const newEnquiries = state.enquiries.filter((enquiry) => (enquiry.status || 'New') === 'New').length;
   const publishedArticles = state.articles.filter((article) => article.published).length;
+  const publishedArchiveItems = state.archiveItems.filter((item) => item.is_published).length;
   container.innerHTML = `
     <article><strong>${activeInventory}</strong><span>Active Inventory</span></article>
-    <article><strong>${featuredItems}</strong><span>Featured Objects</span></article>
     <article><strong>${newEnquiries}</strong><span>New Enquiries</span></article>
     <article><strong>${publishedArticles}</strong><span>Published Articles</span></article>
+    <article><strong>${publishedArchiveItems}</strong><span>Digital Archive</span></article>
   `;
 }
 
@@ -1938,7 +2550,13 @@ async function openAdminDashboard() {
   document.getElementById('login-section')?.classList.add('hidden');
   document.getElementById('admin-section')?.classList.remove('hidden');
   await seedDefaults();
-  await Promise.all([loadTags(), loadCollections(), loadItems(), loadArticles(true), loadEnquiries(), loadSettings()]);
+  await Promise.all([loadTags(), loadCollections(), loadItems(), loadArticles(true), loadArchiveItems(true), loadEnquiries(), loadSettings()]);
+  if (!state.items.length) {
+    setStatus('Preparing starter inventory...');
+    await seedSampleInventory();
+    await Promise.all([loadTags(), loadCollections(), loadItems()]);
+    setStatus('Starter inventory is ready to edit.', 'success');
+  }
   fillAdminOptions();
   fillTagChecklist();
   renderTagManager();
@@ -1946,6 +2564,7 @@ async function openAdminDashboard() {
   renderInventory();
   renderSoldItems();
   renderAdminArticles();
+  renderAdminArchiveItems();
   renderEnquiries();
   renderCollectionRequests();
   populateEnquiryFilters();
@@ -2005,8 +2624,10 @@ async function initAdminPage() {
   });
   document.getElementById('item-form')?.addEventListener('submit', saveItem);
   document.getElementById('article-form')?.addEventListener('submit', saveArticle);
+  document.getElementById('archive-form')?.addEventListener('submit', saveArchiveItem);
   document.getElementById('settings-form')?.addEventListener('submit', saveSettings);
   document.getElementById('article-reset')?.addEventListener('click', resetArticleForm);
+  document.getElementById('archive-reset')?.addEventListener('click', resetArchiveForm);
   document.getElementById('article-add-tag')?.addEventListener('click', addArticleTagFromForm);
   document.getElementById('article-tags-toggle')?.addEventListener('click', () => {
     const menu = document.getElementById('article-tags-menu');
@@ -2018,10 +2639,34 @@ async function initAdminPage() {
     addArticleAdditionalFiles(event.target.files || []);
     event.target.value = '';
   });
+  document.getElementById('archive-file')?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      validateArchiveFile(file);
+      const type = archiveFileTypeFromFile(file);
+      if (document.getElementById('archive-file-type')) document.getElementById('archive-file-type').value = ARCHIVE_FILE_TYPES.includes(type) ? type : 'PDF';
+      document.getElementById('archive-current-file').textContent = `Selected file: ${file.name} (${formatFileSize(file.size)})`;
+    } catch (error) {
+      event.target.value = '';
+      setStatus(error.message, 'error');
+    }
+  });
+  document.getElementById('archive-thumbnail')?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      validateArchiveFile(file, true);
+    } catch (error) {
+      event.target.value = '';
+      setStatus(error.message, 'error');
+    }
+  });
   document.getElementById('tag-form')?.addEventListener('submit', (event) => saveNameRecord(event, 'tag'));
   document.getElementById('collection-form')?.addEventListener('submit', (event) => saveNameRecord(event, 'collection'));
   document.getElementById('cancel-edit')?.addEventListener('click', resetItemForm);
   document.getElementById('inventory-search')?.addEventListener('input', renderInventory);
+  document.getElementById('archive-admin-search')?.addEventListener('input', renderAdminArchiveItems);
   document.getElementById('enquiry-filter-name')?.addEventListener('input', renderEnquiries);
   document.getElementById('enquiry-filter-tag')?.addEventListener('change', renderEnquiries);
   document.getElementById('enquiry-filter-status')?.addEventListener('change', renderEnquiries);
@@ -2034,7 +2679,6 @@ async function initAdminPage() {
       const deleteItemButton = event.target.closest('[data-delete-item]');
       const soldButton = event.target.closest('[data-toggle-sold]');
       const archiveButton = event.target.closest('[data-toggle-archive]');
-      const featuredButton = event.target.closest('[data-toggle-featured]');
       const editTag = event.target.closest('[data-edit-tag]');
       const deleteTag = event.target.closest('[data-delete-tag]');
       const editCollection = event.target.closest('[data-edit-collection]');
@@ -2043,6 +2687,10 @@ async function initAdminPage() {
       const toggleArticlePublished = event.target.closest('[data-toggle-article-published]');
       const toggleArticleFeatured = event.target.closest('[data-toggle-article-featured]');
       const deleteArticleButton = event.target.closest('[data-delete-article]');
+      const editArchive = event.target.closest('[data-edit-archive]');
+      const toggleArchivePublished = event.target.closest('[data-toggle-archive-published]');
+      const toggleArchiveFeatured = event.target.closest('[data-toggle-archive-featured]');
+      const deleteArchiveButton = event.target.closest('[data-delete-archive]');
       const removeArticleImage = event.target.closest('[data-remove-article-image]');
       const moveArticleImage = event.target.closest('[data-move-article-image]');
       if (event.target.matches('input[name="article-tags"]')) updateArticleTagSummary();
@@ -2051,25 +2699,20 @@ async function initAdminPage() {
         document.getElementById('article-tags-toggle')?.setAttribute('aria-expanded', 'false');
       }
       if (editItem) {
-        const item = state.items.find((entry) => entry.id === editItem.dataset.editItem);
+        const item = findItemById(editItem.dataset.editItem);
         if (!item) throw new Error('Item could not be found.');
         populateItemForm(item);
       }
       if (deleteItemButton) await deleteItem(deleteItemButton.dataset.deleteItem);
       if (soldButton) {
-        const item = state.items.find((entry) => entry.id === soldButton.dataset.toggleSold);
+        const item = findItemById(soldButton.dataset.toggleSold);
         if (!item) throw new Error('Item could not be found.');
         await updateItem(item.id, { sold: !item.sold });
       }
       if (archiveButton) {
-        const item = state.items.find((entry) => entry.id === archiveButton.dataset.toggleArchive);
+        const item = findItemById(archiveButton.dataset.toggleArchive);
         if (!item) throw new Error('Item could not be found.');
         await updateItem(item.id, { archive_reference: !item.archive_reference });
-      }
-      if (featuredButton) {
-        const item = state.items.find((entry) => entry.id === featuredButton.dataset.toggleFeatured);
-        if (!item) throw new Error('Item could not be found.');
-        await updateItem(item.id, { featured: !item.featured });
       }
       if (editTag) {
         const tag = state.tags.find((entry) => entry.id === editTag.dataset.editTag);
@@ -2102,6 +2745,25 @@ async function initAdminPage() {
         setStatus(article.featured ? 'Article unfeatured.' : 'Article featured.', 'success');
       }
       if (deleteArticleButton) await deleteArticle(deleteArticleButton.dataset.deleteArticle);
+      if (editArchive) {
+        const item = state.archiveItems.find((entry) => sameRecordId(entry.id, editArchive.dataset.editArchive));
+        if (!item) throw new Error('Archive item could not be found.');
+        populateArchiveForm(item);
+      }
+      if (toggleArchivePublished) {
+        const item = state.archiveItems.find((entry) => sameRecordId(entry.id, toggleArchivePublished.dataset.toggleArchivePublished));
+        if (!item) throw new Error('Archive item could not be found.');
+        if (!item.is_published && !item.file_url) throw new Error('Archive items need an uploaded file before publishing.');
+        await updateArchiveItem(item.id, { is_published: !item.is_published });
+        setStatus(item.is_published ? 'Archive item unpublished.' : 'Archive item published.', 'success');
+      }
+      if (toggleArchiveFeatured) {
+        const item = state.archiveItems.find((entry) => sameRecordId(entry.id, toggleArchiveFeatured.dataset.toggleArchiveFeatured));
+        if (!item) throw new Error('Archive item could not be found.');
+        await updateArchiveItem(item.id, { is_featured: !item.is_featured });
+        setStatus(item.is_featured ? 'Archive item unfeatured.' : 'Archive item featured.', 'success');
+      }
+      if (deleteArchiveButton) await deleteArchiveItem(deleteArchiveButton.dataset.deleteArchive);
       if (removeArticleImage) removeArticleAdditionalImage(Number(removeArticleImage.dataset.removeArticleImage));
       if (moveArticleImage) moveArticleAdditionalImage(Number(moveArticleImage.dataset.moveArticleImage), Number(moveArticleImage.dataset.direction));
     } catch (error) {
@@ -2305,6 +2967,8 @@ function prefillContactReference() {
 
 initHomepageInventory();
 initCataloguePage();
+initDigitalArchivePage();
+initDigitalArchiveDetailPage();
 initHomepageJournal();
 initJournalPage();
 initAdminPage();

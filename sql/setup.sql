@@ -20,6 +20,29 @@ set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+-- Storage bucket for digitised archive PDFs, scans and thumbnails.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'digital-archive',
+  'digital-archive',
+  true,
+  524288000,
+  array[
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/tiff',
+    'application/zip',
+    'application/x-zip-compressed'
+  ]
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 create table if not exists public.collections (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
@@ -105,6 +128,33 @@ create table if not exists public.journal_articles (
   published boolean not null default false
 );
 
+create table if not exists public.digital_archive_items (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  slug text unique,
+  category text not null,
+  sub_category text,
+  author_creator text,
+  publisher_source text,
+  date_year text,
+  description text,
+  short_description text,
+  tags text[] not null default '{}',
+  file_type text not null default 'PDF',
+  file_name text,
+  file_size bigint,
+  file_url text,
+  storage_path text,
+  thumbnail_url text,
+  thumbnail_storage_path text,
+  is_published boolean not null default false,
+  is_featured boolean not null default false,
+  allow_download boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.site_settings (
   id text primary key default 'public',
   public_email text not null default 'jackgault16@yahoo.co.uk',
@@ -132,6 +182,24 @@ alter table public.items add column if not exists physical_details text;
 alter table public.items add column if not exists beaumont_notes text;
 alter table public.items add column if not exists item_references text;
 alter table public.journal_articles add column if not exists additional_image_urls text[] not null default '{}';
+alter table public.digital_archive_items add column if not exists slug text unique;
+alter table public.digital_archive_items add column if not exists sub_category text;
+alter table public.digital_archive_items add column if not exists author_creator text;
+alter table public.digital_archive_items add column if not exists publisher_source text;
+alter table public.digital_archive_items add column if not exists date_year text;
+alter table public.digital_archive_items add column if not exists short_description text;
+alter table public.digital_archive_items add column if not exists tags text[] not null default '{}';
+alter table public.digital_archive_items add column if not exists file_type text not null default 'PDF';
+alter table public.digital_archive_items add column if not exists file_name text;
+alter table public.digital_archive_items add column if not exists file_size bigint;
+alter table public.digital_archive_items add column if not exists file_url text;
+alter table public.digital_archive_items add column if not exists storage_path text;
+alter table public.digital_archive_items add column if not exists thumbnail_url text;
+alter table public.digital_archive_items add column if not exists thumbnail_storage_path text;
+alter table public.digital_archive_items add column if not exists is_published boolean not null default false;
+alter table public.digital_archive_items add column if not exists is_featured boolean not null default false;
+alter table public.digital_archive_items add column if not exists allow_download boolean not null default true;
+alter table public.digital_archive_items add column if not exists sort_order integer not null default 0;
 
 update public.items
 set catalogue_description = trim(both from concat_ws(E'\n\n', nullif(short_description, ''), nullif(full_description, '')))
@@ -193,6 +261,11 @@ create index if not exists idx_journal_articles_date on public.journal_articles 
 create index if not exists idx_journal_articles_published_date on public.journal_articles (published, article_date desc);
 create index if not exists idx_journal_articles_featured on public.journal_articles (featured, published, article_date desc);
 create index if not exists idx_journal_articles_tags on public.journal_articles using gin (tags);
+create index if not exists idx_digital_archive_published on public.digital_archive_items (is_published, sort_order, created_at desc);
+create index if not exists idx_digital_archive_category on public.digital_archive_items (category);
+create index if not exists idx_digital_archive_file_type on public.digital_archive_items (file_type);
+create index if not exists idx_digital_archive_tags on public.digital_archive_items using gin (tags);
+create index if not exists idx_digital_archive_search on public.digital_archive_items using gin (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, '') || ' ' || coalesce(author_creator, '') || ' ' || coalesce(publisher_source, '') || ' ' || coalesce(category, '') || ' ' || coalesce(sub_category, '') || ' ' || coalesce(date_year, '')));
 -- Seed tags.
 insert into public.tags (name) values
   ('Rare Books'),
@@ -234,6 +307,7 @@ alter table public.item_tags enable row level security;
 alter table public.collections enable row level security;
 alter table public.enquiries enable row level security;
 alter table public.journal_articles enable row level security;
+alter table public.digital_archive_items enable row level security;
 alter table public.site_settings enable row level security;
 
 drop policy if exists "Public read items" on public.items;
@@ -271,6 +345,11 @@ create policy "Public read published journal articles" on public.journal_article
 for select to anon, authenticated
 using (published = true);
 
+drop policy if exists "Public read published digital archive items" on public.digital_archive_items;
+create policy "Public read published digital archive items" on public.digital_archive_items
+for select to anon, authenticated
+using (is_published = true);
+
 drop policy if exists "Admin manage items" on public.items;
 create policy "Admin manage items" on public.items
 for all to authenticated
@@ -303,6 +382,12 @@ with check (true);
 
 drop policy if exists "Admin manage journal articles" on public.journal_articles;
 create policy "Admin manage journal articles" on public.journal_articles
+for all to authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Admin manage digital archive items" on public.digital_archive_items;
+create policy "Admin manage digital archive items" on public.digital_archive_items
 for all to authenticated
 using (true)
 with check (true);
@@ -357,5 +442,26 @@ drop policy if exists "Authenticated delete catalogue images" on storage.objects
 create policy "Authenticated delete catalogue images" on storage.objects
 for delete to authenticated
 using (bucket_id = 'catalogue-images');
+
+drop policy if exists "Public read digital archive files" on storage.objects;
+create policy "Public read digital archive files" on storage.objects
+for select to anon, authenticated
+using (bucket_id = 'digital-archive');
+
+drop policy if exists "Authenticated upload digital archive files" on storage.objects;
+create policy "Authenticated upload digital archive files" on storage.objects
+for insert to authenticated
+with check (bucket_id = 'digital-archive');
+
+drop policy if exists "Authenticated update digital archive files" on storage.objects;
+create policy "Authenticated update digital archive files" on storage.objects
+for update to authenticated
+using (bucket_id = 'digital-archive')
+with check (bucket_id = 'digital-archive');
+
+drop policy if exists "Authenticated delete digital archive files" on storage.objects;
+create policy "Authenticated delete digital archive files" on storage.objects
+for delete to authenticated
+using (bucket_id = 'digital-archive');
 
 commit;

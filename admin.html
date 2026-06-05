@@ -48,6 +48,7 @@
           <button class="active" type="button" data-admin-tab="inventory">Inventory</button>
           <button type="button" data-admin-tab="items">Add Object</button>
           <button type="button" data-admin-tab="journal">Journal</button>
+          <button type="button" data-admin-tab="digital-archive">Digital Archive</button>
           <button type="button" data-admin-tab="collections">Collections</button>
           <button type="button" data-admin-tab="tags">Tags</button>
           <button type="button" data-admin-tab="enquiries">Enquiries</button>
@@ -136,10 +137,6 @@
             </label>
 
             <div class="form-row">
-              <label class="toggle-line">
-                <input id="featured" type="checkbox" />
-                <span>Mark as featured object</span>
-              </label>
               <label class="toggle-line">
                 <input id="sold" type="checkbox" />
                 <span>Mark as sold</span>
@@ -297,6 +294,70 @@
             </div>
           </form>
           <div id="articles-container" class="admin-list"></div>
+        </section>
+
+        <section class="admin-panel hidden" data-admin-panel="digital-archive">
+          <form id="archive-form" class="admin-form admin-form--wide">
+            <input id="archive-id" type="hidden" />
+            <input id="current-archive-file-url" type="hidden" />
+            <input id="current-archive-storage-path" type="hidden" />
+            <input id="current-archive-file-name" type="hidden" />
+            <input id="current-archive-file-size" type="hidden" />
+            <input id="current-archive-thumbnail-url" type="hidden" />
+            <input id="current-archive-thumbnail-path" type="hidden" />
+
+            <div class="form-row">
+              <label>Title <input id="archive-title" type="text" required /></label>
+              <label>Category <select id="archive-category" required></select></label>
+            </div>
+            <div class="form-row">
+              <label>Sub-category <input id="archive-sub-category" type="text" placeholder="Regimental History, Pamphlet, Map scan" /></label>
+              <label>Date / Year <input id="archive-date-year" type="text" placeholder="1922 or c. 1917" /></label>
+            </div>
+            <div class="form-row">
+              <label>Author / Creator <input id="archive-author" type="text" /></label>
+              <label>Publisher / Source <input id="archive-publisher" type="text" /></label>
+            </div>
+            <label>Description <textarea id="archive-description" rows="8" placeholder="Full archive description, research context and notes"></textarea></label>
+            <label>Short Description <textarea id="archive-short-description" rows="3" placeholder="Optional short preview for archive cards"></textarea></label>
+            <div class="form-row">
+              <label>File Type <select id="archive-file-type"></select></label>
+              <label>Sort Order <input id="archive-sort-order" type="number" step="1" value="0" /></label>
+            </div>
+
+            <div class="admin-upload-grid">
+              <div class="admin-upload-control">
+                <label>Archive File <input id="archive-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.zip,application/pdf,image/*,application/zip" /></label>
+                <p class="form-note" id="archive-current-file">No archive file selected.</p>
+              </div>
+              <div class="admin-upload-control">
+                <label>Thumbnail Image <input id="archive-thumbnail" type="file" accept="image/*" /></label>
+                <label class="toggle-line toggle-line--compact"><input id="remove-archive-thumbnail" type="checkbox" /><span>Remove current thumbnail</span></label>
+              </div>
+            </div>
+
+            <fieldset class="tag-checklist-wrap">
+              <legend>Tags</legend>
+              <div id="archive-tag-checklist" class="tag-checklist"></div>
+            </fieldset>
+
+            <div class="form-row">
+              <label class="toggle-line"><input id="archive-published" type="checkbox" /><span>Publish Item</span></label>
+              <label class="toggle-line"><input id="archive-featured" type="checkbox" /><span>Feature Item</span></label>
+              <label class="toggle-line"><input id="archive-allow-download" type="checkbox" checked /><span>Allow Download</span></label>
+            </div>
+
+            <div class="button-group">
+              <button class="button button--primary" type="submit"><span id="archive-submit-label">Create Archive Item</span></button>
+              <button id="archive-reset" class="button button--ghost" type="button">Clear</button>
+            </div>
+          </form>
+
+          <div class="admin-panel__header">
+            <h2>Digital Archive Items</h2>
+            <input id="archive-admin-search" type="search" placeholder="Search archive items" />
+          </div>
+          <div id="archive-admin-container" class="admin-list"></div>
         </section>
 
         <section class="admin-panel hidden" data-admin-panel="enquiries">
