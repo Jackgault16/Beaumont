@@ -212,11 +212,9 @@ async function main() {
       url: canonical,
       image,
       encodingFormat: item.file_type || 'PDF',
-      associatedMedia: item.file_url || undefined,
     }];
     write(path.join(route.slice(1), 'index.html'), routePage('digital-archive-item.html', item.id, `${item.title} | ${siteName}`, description, canonical, image, schema));
     routes.push({ url: canonical, lastmod: modified(item), changefreq: 'monthly', priority: '0.7' });
-    if (item.file_url) routes.push({ url: item.file_url, lastmod: modified(item), changefreq: 'yearly', priority: '0.4' });
   });
 
   write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-05T21:39:33.403Z",
+  "generated_at": "2026-06-05T21:43:40.808Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
@@ -162,12 +162,6 @@
       "lastmod": "2026-06-05",
       "changefreq": "monthly",
       "priority": "0.7"
-    },
-    {
-      "url": "https://quvznoksbhlicppfoqqt.supabase.co/storage/v1/object/public/digital-archive/files/a7d34194-2ff5-4ac9-ab37-7896f6e0652a.pdf",
-      "lastmod": "2026-06-05",
-      "changefreq": "yearly",
-      "priority": "0.4"
     }
   ]
 }
