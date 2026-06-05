@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-06-05T21:37:28.670Z",
+  "routes": [
+    {
+      "url": "https://beaumontarchives.co.uk/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "1.0"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "daily",
+      "priority": "0.9"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/journal.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/digital-archive.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/collection-services.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/material-search.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/about.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/contact.html",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.6"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/a-different-sort-of-war-the-memoirs-of-general-sir-frank-kitson/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/sons-of-the-eagle-a-study-in-guerilla-war/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/history-of-the-war-in-the-peninsula-and-in-the-south-of-france-from-the-year-1807-to-the-y/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/the-second-world-war-complete-six-volume-set/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/r-l-stevenson-memories/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/victory-war-speeches-by-the-right-hon-winston-s-churchill-o-m-c-h-m-p-1945/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/the-memoirs-of-field-marshal-the-viscount-montgomery-of-alamein/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/charles-george-gordon-english-men-of-action-series/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/victory-in-the-west-volume-i-the-battle-of-normandy/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/robert-graves-lawrence-and-the-arabs/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/richard-aldington-lawrence-of-arabia-a-biographical-enquiry-1955/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/winston-s-churchill-the-second-world-war-volumes-i-iv/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/the-history-of-the-36th-ulster-division/",
+      "lastmod": "2026-06-05",
+      "changefreq": "weekly",
+      "priority": "0.8"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/articles/why-provenance-matters-in-rare-book-collecting/",
+      "lastmod": "2026-06-04",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/articles/valuating-the-priceless/",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/articles/more-than-a-signature-why-inscriptions-matter-in-rare-books/",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/articles/understanding-first-world-war-trench-maps/",
+      "lastmod": "2026-06-04",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/articles/approaching-an-estate-library-review/",
+      "lastmod": "2026-06-04",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/pdf-vault/hgfdshgdfg/",
+      "lastmod": "2026-06-05",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://quvznoksbhlicppfoqqt.supabase.co/storage/v1/object/public/digital-archive/files/a7d34194-2ff5-4ac9-ab37-7896f6e0652a.pdf",
+      "lastmod": "2026-06-05",
+      "changefreq": "yearly",
+      "priority": "0.4"
+    }
+  ]
+}

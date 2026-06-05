@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://beaumontarchives.co.uk/sitemap.xml

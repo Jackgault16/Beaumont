@@ -1,4 +1,7 @@
 ﻿const CONFIG = window.BEAUMONT_SUPABASE_CONFIG || {};
+const SITE_URL = 'https://beaumontarchives.co.uk';
+const SITE_NAME = 'Beaumont Archives';
+const DEFAULT_SHARE_IMAGE = `${SITE_URL}/og-image.jpg`;
 const ADMIN_USERNAME = 'admin';
 const DEFAULT_CATEGORIES = ['Books', 'Maps', 'Documents', 'Historical Objects'];
 const DEFAULT_TAGS = [
@@ -302,6 +305,89 @@ function escapeHtml(value) {
   }[char]));
 }
 
+function slugify(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 90) || 'item';
+}
+
+function absoluteUrl(path = '') {
+  return new URL(path || '/', SITE_URL).href;
+}
+
+function catalogueItemUrl(item) {
+  return `catalogue/${slugify(item.title || item.reference_number || item.id)}/`;
+}
+
+function articleUrl(article) {
+  return `articles/${slugify(article.title || article.id)}/`;
+}
+
+function archiveItemUrl(item) {
+  return `pdf-vault/${slugify(item.title || item.id)}/`;
+}
+
+function routeSlug(prefix) {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const index = parts.indexOf(prefix);
+  return index >= 0 ? parts[index + 1] || '' : '';
+}
+
+function metaContent(name, content, property = false) {
+  if (!content) return;
+  const selector = property ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+  let node = document.head.querySelector(selector);
+  if (!node) {
+    node = document.createElement('meta');
+    node.setAttribute(property ? 'property' : 'name', name);
+    document.head.appendChild(node);
+  }
+  node.setAttribute('content', content);
+}
+
+function linkHref(rel, href) {
+  if (!href) return;
+  let node = document.head.querySelector(`link[rel="${rel}"]`);
+  if (!node) {
+    node = document.createElement('link');
+    node.setAttribute('rel', rel);
+    document.head.appendChild(node);
+  }
+  node.setAttribute('href', href);
+}
+
+function setJsonLd(id, data) {
+  let node = document.getElementById(id);
+  if (!node) {
+    node = document.createElement('script');
+    node.type = 'application/ld+json';
+    node.id = id;
+    document.head.appendChild(node);
+  }
+  node.textContent = JSON.stringify(data);
+}
+
+function applySeo({ title, description, url, image = DEFAULT_SHARE_IMAGE, type = 'website', schema = [] }) {
+  const pageTitle = title.includes(SITE_NAME) ? title : `${title} | ${SITE_NAME}`;
+  const canonical = absoluteUrl(url || `${window.location.pathname}${window.location.search}`);
+  document.title = pageTitle;
+  metaContent('description', description);
+  metaContent('og:title', pageTitle, true);
+  metaContent('og:description', description, true);
+  metaContent('og:image', image, true);
+  metaContent('og:url', canonical, true);
+  metaContent('og:type', type, true);
+  metaContent('twitter:card', image ? 'summary_large_image' : 'summary');
+  metaContent('twitter:title', pageTitle);
+  metaContent('twitter:description', description);
+  metaContent('twitter:image', image);
+  linkHref('canonical', canonical);
+  if (schema.length) setJsonLd('beaumont-jsonld', schema.length === 1 ? schema[0] : schema);
+}
+
 function setStatus(message, type = 'info') {
   document.querySelectorAll('[data-status]').forEach((node) => {
     node.textContent = message;
@@ -398,6 +484,178 @@ function itemSearchText(item) {
     item.item_references,
     ...itemTags(item),
   ].join(' ').toLowerCase();
+}
+
+function organizationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['Organization', 'LocalBusiness'],
+    name: SITE_NAME,
+    url: SITE_URL,
+    email: 'jackgault16@yahoo.co.uk',
+    telephone: '07549 892003',
+    description: 'Rare books, historical maps, military history, manuscripts and historical material curated for collectors, historians and institutions.',
+  };
+}
+
+function websiteSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_NAME,
+    url: SITE_URL,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE_URL}/catalogue.html?search={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+function initBaseSeo() {
+  const path = window.location.pathname;
+  if (routeSlug('catalogue') || routeSlug('articles') || routeSlug('pdf-vault')) return;
+  const pages = {
+    '/': {
+      title: 'Beaumont Archives | Rare Books, Historical Maps & Military History',
+      description: 'Beaumont Archives specialises in rare books, historical maps, manuscripts, military history and historical material for collectors, historians and institutions.',
+      url: '/',
+      priority: true,
+    },
+    '/index.html': {
+      title: 'Beaumont Archives | Rare Books, Historical Maps & Military History',
+      description: 'Beaumont Archives specialises in rare books, historical maps, manuscripts, military history and historical material for collectors, historians and institutions.',
+      url: '/',
+      priority: true,
+    },
+    '/catalogue.html': {
+      title: 'Catalogue | Beaumont Archives',
+      description: 'Browse rare books, historical maps, manuscripts, military history, documents and selected historical objects from Beaumont Archives.',
+      url: '/catalogue.html',
+    },
+    '/journal.html': {
+      title: 'Journal | Beaumont Archives',
+      description: 'Collecting notes, article topics, provenance studies and research guides on rare books, maps and historical material.',
+      url: '/journal.html',
+    },
+    '/digital-archive.html': {
+      title: 'PDF Vault & Digital Archive | Beaumont Archives',
+      description: 'Digitised books, documents, scans and PDF research material made available for historical study and private research.',
+      url: '/digital-archive.html',
+    },
+    '/collection-services.html': {
+      title: 'Collection Services | Beaumont Archives',
+      description: 'Research-led collection reviews, consignment advice, cataloguing support and sourcing guidance for rare books, maps and archives.',
+      url: '/collection-services.html',
+    },
+    '/material-search.html': {
+      title: 'Material Search | Beaumont Archives',
+      description: 'Request help sourcing rare books, historical maps, military history, manuscripts, documents and specialist collection material.',
+      url: '/material-search.html',
+    },
+    '/about.html': {
+      title: 'About | Beaumont Archives',
+      description: 'About Beaumont Archives, curators of rare books, historical maps, manuscripts, military history and researched historical material.',
+      url: '/about.html',
+    },
+  };
+  const page = pages[path];
+  if (!page) return;
+  applySeo({
+    title: page.title,
+    description: page.description,
+    url: page.url,
+    schema: page.priority ? [organizationSchema(), websiteSchema()] : [organizationSchema()],
+  });
+}
+
+function breadcrumbSchema(items) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.url),
+    })),
+  };
+}
+
+function itemSeoDescription(item) {
+  const base = plainTextExcerpt(catalogueDescription(item), 150);
+  const parts = [
+    base,
+    item.year ? `Published ${item.year}.` : '',
+    item.reference_number ? `Reference ${item.reference_number}.` : '',
+    'Available from Beaumont Archives.',
+  ].filter(Boolean);
+  return plainTextExcerpt(parts.join(' '), 170);
+}
+
+function itemSchema(item) {
+  const url = absoluteUrl(catalogueItemUrl(item));
+  const image = realItemImage(item) || DEFAULT_SHARE_IMAGE;
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['Book', 'Product'],
+    name: item.title,
+    url,
+    image,
+    description: itemSeoDescription(item),
+    sku: item.reference_number || item.id,
+    category: item.category,
+    datePublished: item.year || undefined,
+    author: item.author ? { '@type': 'Person', name: item.author } : undefined,
+    publisher: item.publisher ? { '@type': 'Organization', name: item.publisher } : undefined,
+    additionalProperty: [
+      item.reference_number ? { '@type': 'PropertyValue', name: 'Reference number', value: item.reference_number } : null,
+      item.collection_name ? { '@type': 'PropertyValue', name: 'Collection', value: item.collection_name } : null,
+      item.provenance ? { '@type': 'PropertyValue', name: 'Provenance', value: item.provenance } : null,
+      item.condition ? { '@type': 'PropertyValue', name: 'Condition', value: item.condition } : null,
+      itemTags(item).length ? { '@type': 'PropertyValue', name: 'Subjects', value: itemTags(item).join(', ') } : null,
+    ].filter(Boolean),
+    offers: {
+      '@type': 'Offer',
+      price: item.price || undefined,
+      priceCurrency: item.price ? 'GBP' : undefined,
+      availability: item.sold ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+      url,
+    },
+  };
+}
+
+function articleSchema(article) {
+  const url = absoluteUrl(articleUrl(article));
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['Article', 'BlogPosting'],
+    headline: article.title,
+    description: plainTextExcerpt(article.summary || article.content, 170),
+    image: cleanText(article.featured_image_url) || DEFAULT_SHARE_IMAGE,
+    datePublished: article.article_date || undefined,
+    dateModified: article.updated_at || article.article_date || undefined,
+    author: { '@type': 'Organization', name: SITE_NAME },
+    publisher: { '@type': 'Organization', name: SITE_NAME },
+    mainEntityOfPage: url,
+  };
+}
+
+function archiveSchema(item) {
+  const url = absoluteUrl(archiveItemUrl(item));
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['CreativeWork', 'DigitalDocument'],
+    name: item.title,
+    description: plainTextExcerpt(archiveDescription(item), 170),
+    url,
+    image: cleanText(item.thumbnail_url) || DEFAULT_SHARE_IMAGE,
+    encodingFormat: archiveFileType(item),
+    datePublished: item.date_year || undefined,
+    author: item.author_creator ? { '@type': 'Person', name: item.author_creator } : undefined,
+    publisher: item.publisher_source ? { '@type': 'Organization', name: item.publisher_source } : undefined,
+    associatedMedia: archivePublicUrl(item) || undefined,
+  };
 }
 
 function sameRecordId(left, right) {
@@ -579,7 +837,7 @@ function renderFeaturedCard(item) {
   const description = plainTextExcerpt(catalogueDescription(item), 130);
   return `
     <article class="catalogue-card">
-      <a class="catalogue-card__image${image ? ' catalogue-card__image--photo' : ' catalogue-card__image--empty'}"${imageStyle} href="catalogue.html?item=${item.id}" aria-label="${escapeHtml(item.title)}">
+      <a class="catalogue-card__image${image ? ' catalogue-card__image--photo' : ' catalogue-card__image--empty'}"${imageStyle} href="${catalogueItemUrl(item)}" aria-label="${escapeHtml(item.title)}">
         ${image ? '' : cataloguePlaceholder()}
       </a>
       <div class="catalogue-card__body">
@@ -671,7 +929,7 @@ function renderCatalogueCard(item) {
   const description = plainTextExcerpt(catalogueDescription(item), 180);
   return `
     <article class="catalogue-item">
-      <a class="catalogue-item__image${image ? '' : ' catalogue-item__image--empty'}" href="catalogue.html?item=${item.id}">
+      <a class="catalogue-item__image${image ? '' : ' catalogue-item__image--empty'}" href="${catalogueItemUrl(item)}">
         ${cataloguePlaceholder()}
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.remove();" />` : ''}
       </a>
@@ -684,7 +942,7 @@ function renderCatalogueCard(item) {
           ${item.collection_name ? `<p><strong>Collection:</strong> ${escapeHtml(item.collection_name)}</p>` : ''}
           <p><strong>Availability:</strong> ${escapeHtml(availabilityLabel(item))}</p>
         </div>
-        <a href="catalogue.html?item=${item.id}" class="button--enquire">View Object</a>
+        <a href="${catalogueItemUrl(item)}" class="button--enquire">View Object</a>
       </div>
     </article>
   `;
@@ -744,6 +1002,32 @@ function renderItemDetail(item) {
   const condition = cleanText(item.condition);
   const beaumontNotes = cleanText(item.beaumont_notes);
   const references = cleanText(item.item_references);
+  const pageUrl = catalogueItemUrl(item);
+  const relatedItems = state.items
+    .filter((entry) => entry.id !== item.id && !entry.archive_reference && (entry.category === item.category || itemTags(entry).some((tag) => itemTags(item).includes(tag))))
+    .slice(0, 3);
+  const relatedArticles = state.articles
+    .filter((article) => {
+      const haystack = `${article.title || ''} ${article.summary || ''} ${(article.tags || []).join(' ')}`.toLowerCase();
+      return itemTags(item).some((tag) => haystack.includes(tag.toLowerCase()))
+        || haystack.includes(String(item.category || '').toLowerCase());
+    })
+    .slice(0, 3);
+  applySeo({
+    title: item.title,
+    description: itemSeoDescription(item),
+    url: pageUrl,
+    image: realItemImage(item) || DEFAULT_SHARE_IMAGE,
+    type: 'product',
+    schema: [
+      itemSchema(item),
+      breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Catalogue', url: '/catalogue.html' },
+        { name: item.title, url: pageUrl },
+      ]),
+    ],
+  });
   const sections = [
     description ? { title: 'Catalogue Description', body: markdownToHtml(description) } : null,
     physicalDetails ? { title: 'Physical Details', body: `<p>${escapeHtml(physicalDetails)}</p>` } : null,
@@ -755,7 +1039,7 @@ function renderItemDetail(item) {
   listing.classList.add('hidden');
   detail.classList.remove('hidden');
   detail.innerHTML = `
-    <a class="catalogue-back" href="catalogue.html">Back to Catalogue</a>
+    <a class="catalogue-back" href="/catalogue.html">Back to Catalogue</a>
     <article class="item-detail">
       <div class="item-detail__media">
         <div class="item-detail__viewer">
@@ -796,6 +1080,13 @@ function renderItemDetail(item) {
           `).join('')}
         </div>
         <a class="button button--primary item-detail__enquire" href="${enquiryUrl(item)}">Enquire About This Item</a>
+        ${relatedItems.length || relatedArticles.length ? `
+          <section class="item-detail__section">
+            <h3>Related Research</h3>
+            ${relatedItems.map((entry) => `<p><a href="${catalogueItemUrl(entry)}">${escapeHtml(entry.title)}</a></p>`).join('')}
+            ${relatedArticles.map((article) => `<p><a href="${articleUrl(article)}">${escapeHtml(article.title)}</a></p>`).join('')}
+          </section>
+        ` : ''}
       </div>
     </article>
   `;
@@ -841,16 +1132,19 @@ async function initCataloguePage() {
     return;
   }
   try {
-    await Promise.all([loadItems(), loadTags(), loadCollections()]);
+    await Promise.all([loadItems(), loadTags(), loadCollections(), loadArticles(false)]);
     if (!state.items.length) {
       state.items = SAMPLE_STOCK;
       if (!state.tags.length) state.tags = DEFAULT_TAGS.map((name) => ({ name }));
       if (!state.collections.length) state.collections = DEFAULT_COLLECTIONS.map((name) => ({ name }));
     }
     const params = new URLSearchParams(window.location.search);
-    const itemId = params.get('item');
-    if (itemId) {
-      const item = findItemById(itemId) || SAMPLE_STOCK.find((entry) => sameRecordId(entry.id, itemId));
+    const itemId = params.get('item') || window.BEAUMONT_ROUTE_ID;
+    const itemSlug = routeSlug('catalogue');
+    if (itemId || itemSlug) {
+      const item = findItemById(itemId)
+        || state.items.find((entry) => slugify(entry.title || entry.reference_number || entry.id) === itemSlug)
+        || SAMPLE_STOCK.find((entry) => sameRecordId(entry.id, itemId) || slugify(entry.title || entry.reference_number || entry.id) === itemSlug);
       if (item) renderItemDetail(item);
       return;
     }
@@ -1339,7 +1633,7 @@ function archiveCard(item) {
   const fileUrl = archivePublicUrl(item);
   return `
     <article class="archive-card catalogue-item">
-      <a class="archive-card__media catalogue-item__image${thumbnail ? '' : ' catalogue-item__image--empty'}" href="digital-archive-item.html?id=${encodeURIComponent(item.id)}">
+      <a class="archive-card__media catalogue-item__image${thumbnail ? '' : ' catalogue-item__image--empty'}" href="${archiveItemUrl(item)}">
         ${thumbnail ? `<img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(item.title)} thumbnail" loading="lazy" onerror="this.remove();" />` : archivePlaceholder()}
         <span class="archive-file-badge">${escapeHtml(archiveFileType(item))}</span>
       </a>
@@ -1349,7 +1643,7 @@ function archiveCard(item) {
         ${description ? `<p class="catalogue-item__desc">${escapeHtml(description)}</p>` : ''}
         ${tags.length ? `<div class="archive-tag-list">${tags.map((tagName) => `<span>${escapeHtml(tagName)}</span>`).join('')}</div>` : ''}
         <div class="archive-card__actions">
-          <a class="button--enquire" href="digital-archive-item.html?id=${encodeURIComponent(item.id)}">View</a>
+          <a class="button--enquire" href="${archiveItemUrl(item)}">View</a>
           ${fileUrl && item.allow_download ? `<a class="button--enquire button--archive-secondary" href="${escapeHtml(fileUrl)}" download="${escapeHtml(item.file_name || item.title || 'digital-archive-file')}">Download</a>` : ''}
         </div>
       </div>
@@ -1415,11 +1709,27 @@ function renderArchiveDetail(item) {
   if (!detail) return;
   const fileUrl = archivePublicUrl(item);
   const thumbnail = cleanText(item.thumbnail_url);
+  const pageUrl = archiveItemUrl(item);
+  applySeo({
+    title: item.title,
+    description: plainTextExcerpt(archiveDescription(item), 170),
+    url: pageUrl,
+    image: thumbnail || DEFAULT_SHARE_IMAGE,
+    type: 'article',
+    schema: [
+      archiveSchema(item),
+      breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Digital Archive', url: '/digital-archive.html' },
+        { name: item.title, url: pageUrl },
+      ]),
+    ],
+  });
   const related = state.archiveItems
     .filter((entry) => entry.id !== item.id && (entry.category === item.category || archiveTags(entry).some((tag) => archiveTags(item).includes(tag))))
     .slice(0, 3);
   detail.innerHTML = `
-    <a class="catalogue-back" href="digital-archive.html">Back to Digital Archive</a>
+    <a class="catalogue-back" href="/digital-archive.html">Back to Digital Archive</a>
     <article class="item-detail archive-detail">
       <div class="item-detail__media">
         <div class="item-detail__viewer">
@@ -1471,8 +1781,9 @@ async function initDigitalArchiveDetailPage() {
   try {
     if (!getClient()) throw new Error(supabaseRequiredMessage());
     await loadArchiveItems(false);
-    const id = new URLSearchParams(window.location.search).get('id');
-    const item = state.archiveItems.find((entry) => sameRecordId(entry.id, id));
+    const id = new URLSearchParams(window.location.search).get('id') || window.BEAUMONT_ROUTE_ID;
+    const itemSlug = routeSlug('pdf-vault');
+    const item = state.archiveItems.find((entry) => sameRecordId(entry.id, id) || slugify(entry.title || entry.id) === itemSlug);
     if (!item) {
       detail.innerHTML = '<div class="catalogue-empty"><p>This Digital Archive item is not currently available.</p></div>';
       return;
@@ -1667,15 +1978,15 @@ function renderArticleCard(article, showImage = false) {
   return `
     <article class="journal-entry">
       ${showImage ? `
-        <a class="journal-entry__media" data-image-frame href="journal.html?article=${article.id}" aria-label="Read ${escapeHtml(article.title)}">
+        <a class="journal-entry__media" data-image-frame href="${articleUrl(article)}" aria-label="Read ${escapeHtml(article.title)}">
           ${cataloguePlaceholder()}
           ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(article.title)}" onerror="this.remove();" />` : ''}
         </a>
       ` : ''}
       <p class="journal-entry__meta">${meta}</p>
-      <h3><a href="journal.html?article=${article.id}">${escapeHtml(article.title)}</a></h3>
+      <h3><a href="${articleUrl(article)}">${escapeHtml(article.title)}</a></h3>
       <p class="journal-entry__summary">${escapeHtml(article.summary || '')}</p>
-      <a class="journal-entry__link" href="journal.html?article=${article.id}">Read Article &rarr;</a>
+      <a class="journal-entry__link" href="${articleUrl(article)}">Read Article &rarr;</a>
     </article>
   `;
 }
@@ -1686,6 +1997,22 @@ function renderArticleDetail(article) {
   document.querySelector('.journal-editorial-header')?.classList.add('hidden');
   const meta = [article.category || 'Journal', formatArticleDate(article.article_date)].filter(Boolean).map(escapeHtml).join(' &bull; ');
   const image = cleanText(article.featured_image_url);
+  const pageUrl = articleUrl(article);
+  applySeo({
+    title: article.title,
+    description: plainTextExcerpt(article.summary || article.content, 170),
+    url: pageUrl,
+    image: image || DEFAULT_SHARE_IMAGE,
+    type: 'article',
+    schema: [
+      articleSchema(article),
+      breadcrumbSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Journal', url: '/journal.html' },
+        { name: article.title, url: pageUrl },
+      ]),
+    ],
+  });
   const articleContent = renderArticleContentWithImages(article.content || '', article.additional_image_urls || [], article);
   const related = state.articles
     .filter((entry) => String(entry.id) !== String(article.id))
@@ -1712,14 +2039,14 @@ function renderArticleDetail(article) {
         <section class="journal-related" aria-label="Related articles">
           <h2>Related Articles</h2>
           ${related.map((entry) => `
-            <a class="journal-related__link" href="journal.html?article=${entry.id}">
+            <a class="journal-related__link" href="${articleUrl(entry)}">
               <span>${escapeHtml(entry.category || 'Journal')} &bull; ${escapeHtml(formatArticleDate(entry.article_date))}</span>
               ${escapeHtml(entry.title)}
             </a>
           `).join('')}
         </section>
       ` : ''}
-      <a class="journal-entry__link journal-detail__back" href="journal.html">&larr; Back to Journal</a>
+      <a class="journal-entry__link journal-detail__back" href="/journal.html">&larr; Back to Journal</a>
     </article>
   `;
 }
@@ -1729,9 +2056,11 @@ async function initJournalPage() {
   if (!list) return;
   await loadArticles(false);
   const params = new URLSearchParams(window.location.search);
-  const articleId = params.get('article');
-  if (articleId) {
-    const article = state.articles.find((entry) => String(entry.id) === articleId) || SAMPLE_ARTICLES.find((entry) => entry.id === articleId);
+  const articleId = params.get('article') || window.BEAUMONT_ROUTE_ID;
+  const articleSlug = routeSlug('articles');
+  if (articleId || articleSlug) {
+    const article = state.articles.find((entry) => String(entry.id) === articleId || slugify(entry.title || entry.id) === articleSlug)
+      || SAMPLE_ARTICLES.find((entry) => entry.id === articleId || slugify(entry.title || entry.id) === articleSlug);
     if (article) renderArticleDetail(article);
     return;
   }
@@ -2972,6 +3301,7 @@ initDigitalArchiveDetailPage();
 initHomepageJournal();
 initJournalPage();
 initAdminPage();
+initBaseSeo();
 prefillContactReference();
 
 
