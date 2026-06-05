@@ -593,9 +593,58 @@ function itemSeoDescription(item) {
   return plainTextExcerpt(parts.join(' '), 170);
 }
 
+function firstItemValue(item, fields) {
+  return fields.map((field) => cleanText(item[field])).find(Boolean) || '';
+}
+
+function labelledItemValue(item, labels) {
+  const source = [item.physical_details, item.catalogue_description, item.full_description]
+    .map((value) => String(value || ''))
+    .join('\n');
+  for (const label of labels) {
+    const pattern = new RegExp(`${label}\\s*[:\\-]\\s*([^\\n.;]+)`, 'i');
+    const match = source.match(pattern);
+    if (match && cleanText(match[1])) return cleanText(match[1]);
+  }
+  return '';
+}
+
+function itemAuthor(item) {
+  return firstItemValue(item, ['author', 'author_name', 'creator', 'artist'])
+    || labelledItemValue(item, ['author', 'creator', 'artist']);
+}
+
+function itemPublisher(item) {
+  return firstItemValue(item, ['publisher', 'publisher_name', 'imprint'])
+    || labelledItemValue(item, ['publisher', 'published by', 'imprint']);
+}
+
+function itemPublicationDate(item) {
+  return firstItemValue(item, ['publication_date', 'published_date', 'date_published', 'year']);
+}
+
+function itemEdition(item) {
+  return firstItemValue(item, ['edition', 'edition_statement'])
+    || labelledItemValue(item, ['edition', 'edition statement']);
+}
+
+function itemConditionSchema(item) {
+  const condition = cleanText(item.condition).toLowerCase();
+  if (!condition) return undefined;
+  if (condition.includes('new')) return 'https://schema.org/NewCondition';
+  if (condition.includes('damaged')) return 'https://schema.org/DamagedCondition';
+  if (condition.includes('used') || condition.includes('good') || condition.includes('fine') || condition.includes('very')) return 'https://schema.org/UsedCondition';
+  return 'https://schema.org/UsedCondition';
+}
+
 function itemSchema(item) {
   const url = absoluteUrl(catalogueItemUrl(item));
   const image = realItemImage(item) || DEFAULT_SHARE_IMAGE;
+  const author = itemAuthor(item);
+  const publisher = itemPublisher(item);
+  const publicationDate = itemPublicationDate(item);
+  const edition = itemEdition(item);
+  const condition = cleanText(item.condition);
   return {
     '@context': 'https://schema.org',
     '@type': ['Book', 'Product'],
@@ -604,15 +653,23 @@ function itemSchema(item) {
     image,
     description: itemSeoDescription(item),
     sku: item.reference_number || item.id,
+    productID: item.reference_number || item.id,
+    identifier: item.reference_number || item.id,
     category: item.category,
-    datePublished: item.year || undefined,
-    author: item.author ? { '@type': 'Person', name: item.author } : undefined,
-    publisher: item.publisher ? { '@type': 'Organization', name: item.publisher } : undefined,
+    datePublished: publicationDate || undefined,
+    bookEdition: edition || undefined,
+    author: author ? { '@type': 'Person', name: author } : undefined,
+    publisher: publisher ? { '@type': 'Organization', name: publisher } : undefined,
+    itemCondition: itemConditionSchema(item),
     additionalProperty: [
       item.reference_number ? { '@type': 'PropertyValue', name: 'Reference number', value: item.reference_number } : null,
+      author ? { '@type': 'PropertyValue', name: 'Author', value: author } : null,
+      publisher ? { '@type': 'PropertyValue', name: 'Publisher', value: publisher } : null,
+      publicationDate ? { '@type': 'PropertyValue', name: 'Publication date', value: publicationDate } : null,
+      edition ? { '@type': 'PropertyValue', name: 'Edition', value: edition } : null,
       item.collection_name ? { '@type': 'PropertyValue', name: 'Collection', value: item.collection_name } : null,
       item.provenance ? { '@type': 'PropertyValue', name: 'Provenance', value: item.provenance } : null,
-      item.condition ? { '@type': 'PropertyValue', name: 'Condition', value: item.condition } : null,
+      condition ? { '@type': 'PropertyValue', name: 'Condition', value: condition } : null,
       itemTags(item).length ? { '@type': 'PropertyValue', name: 'Subjects', value: itemTags(item).join(', ') } : null,
     ].filter(Boolean),
     offers: {
@@ -620,6 +677,8 @@ function itemSchema(item) {
       price: item.price || undefined,
       priceCurrency: item.price ? 'GBP' : undefined,
       availability: item.sold ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+      itemCondition: itemConditionSchema(item),
+      sku: item.reference_number || item.id,
       url,
     },
   };

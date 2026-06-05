@@ -86,6 +86,99 @@ function itemDescription(item) {
   ].filter(Boolean).join(' '));
 }
 
+function cleanText(value) {
+  return String(value || '').trim();
+}
+
+function firstItemValue(item, fields) {
+  return fields.map((field) => cleanText(item[field])).find(Boolean) || '';
+}
+
+function labelledItemValue(item, labels) {
+  const source = [item.physical_details, item.catalogue_description, item.full_description]
+    .map((value) => String(value || ''))
+    .join('\n');
+  for (const label of labels) {
+    const pattern = new RegExp(`${label}\\s*[:\\-]\\s*([^\\n.;]+)`, 'i');
+    const match = source.match(pattern);
+    if (match && cleanText(match[1])) return cleanText(match[1]);
+  }
+  return '';
+}
+
+function itemAuthor(item) {
+  return firstItemValue(item, ['author', 'author_name', 'creator', 'artist'])
+    || labelledItemValue(item, ['author', 'creator', 'artist']);
+}
+
+function itemPublisher(item) {
+  return firstItemValue(item, ['publisher', 'publisher_name', 'imprint'])
+    || labelledItemValue(item, ['publisher', 'published by', 'imprint']);
+}
+
+function itemPublicationDate(item) {
+  return firstItemValue(item, ['publication_date', 'published_date', 'date_published', 'year']);
+}
+
+function itemEdition(item) {
+  return firstItemValue(item, ['edition', 'edition_statement'])
+    || labelledItemValue(item, ['edition', 'edition statement']);
+}
+
+function itemConditionSchema(item) {
+  const condition = cleanText(item.condition).toLowerCase();
+  if (!condition) return undefined;
+  if (condition.includes('new')) return 'https://schema.org/NewCondition';
+  if (condition.includes('damaged')) return 'https://schema.org/DamagedCondition';
+  if (condition.includes('used') || condition.includes('good') || condition.includes('fine') || condition.includes('very')) return 'https://schema.org/UsedCondition';
+  return 'https://schema.org/UsedCondition';
+}
+
+function itemSchema(item, canonical, image, description) {
+  const author = itemAuthor(item);
+  const publisher = itemPublisher(item);
+  const publicationDate = itemPublicationDate(item);
+  const edition = itemEdition(item);
+  const condition = cleanText(item.condition);
+  return {
+    '@context': 'https://schema.org',
+    '@type': ['Book', 'Product'],
+    name: item.title,
+    url: canonical,
+    image,
+    description,
+    sku: item.reference_number || item.id,
+    productID: item.reference_number || item.id,
+    identifier: item.reference_number || item.id,
+    category: item.category,
+    datePublished: publicationDate || undefined,
+    bookEdition: edition || undefined,
+    author: author ? { '@type': 'Person', name: author } : undefined,
+    publisher: publisher ? { '@type': 'Organization', name: publisher } : undefined,
+    itemCondition: itemConditionSchema(item),
+    additionalProperty: [
+      item.reference_number ? { '@type': 'PropertyValue', name: 'Reference number', value: item.reference_number } : null,
+      author ? { '@type': 'PropertyValue', name: 'Author', value: author } : null,
+      publisher ? { '@type': 'PropertyValue', name: 'Publisher', value: publisher } : null,
+      publicationDate ? { '@type': 'PropertyValue', name: 'Publication date', value: publicationDate } : null,
+      edition ? { '@type': 'PropertyValue', name: 'Edition', value: edition } : null,
+      item.collection_name ? { '@type': 'PropertyValue', name: 'Collection', value: item.collection_name } : null,
+      item.provenance ? { '@type': 'PropertyValue', name: 'Provenance', value: item.provenance } : null,
+      condition ? { '@type': 'PropertyValue', name: 'Condition', value: condition } : null,
+      item.item_tags?.length ? { '@type': 'PropertyValue', name: 'Subjects', value: item.item_tags.map((entry) => entry.tags?.name).filter(Boolean).join(', ') } : null,
+    ].filter(Boolean),
+    offers: {
+      '@type': 'Offer',
+      price: item.price || undefined,
+      priceCurrency: item.price ? 'GBP' : undefined,
+      availability: item.sold ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
+      itemCondition: itemConditionSchema(item),
+      sku: item.reference_number || item.id,
+      url: canonical,
+    },
+  };
+}
+
 function routePage(templateFile, routeId, title, description, canonical, image, schema) {
   let html = read(templateFile)
     .replace(/href="styles\.css[^"]*"/g, 'href="/styles.css?v=20260604-editor-fix"')
@@ -156,24 +249,7 @@ async function main() {
     const canonical = absolute(route);
     const image = item.main_image_url || item.item_images?.[0]?.image_url || defaultImage;
     const description = itemDescription(item);
-    const schema = [{
-      '@context': 'https://schema.org',
-      '@type': ['Book', 'Product'],
-      name: item.title,
-      url: canonical,
-      image,
-      description,
-      sku: item.reference_number || item.id,
-      category: item.category,
-      datePublished: item.year || undefined,
-      offers: {
-        '@type': 'Offer',
-        price: item.price || undefined,
-        priceCurrency: item.price ? 'GBP' : undefined,
-        availability: item.sold ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock',
-        url: canonical,
-      },
-    }];
+    const schema = [itemSchema(item, canonical, image, description)];
     write(path.join(route.slice(1), 'index.html'), routePage('catalogue.html', item.id, `${item.title} | ${siteName}`, description, canonical, image, schema));
     routes.push({ url: canonical, lastmod: modified(item), changefreq: 'weekly', priority: '0.8' });
   });
