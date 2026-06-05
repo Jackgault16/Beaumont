@@ -34,10 +34,14 @@ create table if not exists public.items (
   subcategory text,
   year text,
   price numeric(12, 2) check (price is null or price >= 0),
-  short_description text not null,
+  catalogue_description text,
+  short_description text,
   full_description text,
+  physical_details text,
+  beaumont_notes text,
   provenance text,
   condition text,
+  item_references text,
   reference_number text unique,
   collection_name text references public.collections(name) on update cascade on delete set null,
   acquisition_source text,
@@ -101,17 +105,6 @@ create table if not exists public.journal_articles (
   published boolean not null default false
 );
 
-create table if not exists public.currently_seeking (
-  id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  title text not null,
-  description text not null,
-  image_url text,
-  active boolean not null default true,
-  sort_order integer not null default 0
-);
-
 create table if not exists public.site_settings (
   id text primary key default 'public',
   public_email text not null default 'jackgault16@yahoo.co.uk',
@@ -132,8 +125,18 @@ alter table public.enquiries add column if not exists status text not null defau
 alter table public.enquiries add column if not exists internal_notes text;
 alter table public.enquiries add column if not exists description text;
 alter table public.enquiries add column if not exists image_urls text[] not null default '{}';
+alter table public.items add column if not exists catalogue_description text;
+alter table public.items alter column short_description drop not null;
 alter table public.items add column if not exists archive_reference boolean not null default false;
+alter table public.items add column if not exists physical_details text;
+alter table public.items add column if not exists beaumont_notes text;
+alter table public.items add column if not exists item_references text;
 alter table public.journal_articles add column if not exists additional_image_urls text[] not null default '{}';
+
+update public.items
+set catalogue_description = trim(both from concat_ws(E'\n\n', nullif(short_description, ''), nullif(full_description, '')))
+where nullif(catalogue_description, '') is null
+  and (nullif(short_description, '') is not null or nullif(full_description, '') is not null);
 
 -- Automatic stock numbers: BM-2026-001, BM-2026-002, etc.
 create sequence if not exists public.bm_stock_number_seq start 1;
@@ -177,7 +180,8 @@ create index if not exists idx_items_collection_name on public.items (collection
 create index if not exists idx_items_featured_unsold on public.items (featured, sold, created_at desc);
 create index if not exists idx_items_sold on public.items (sold);
 create index if not exists idx_items_reference_number on public.items (reference_number);
-create index if not exists idx_items_title_search on public.items using gin (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(short_description, '') || ' ' || coalesce(full_description, '') || ' ' || coalesce(reference_number, '')));
+drop index if exists public.idx_items_title_search;
+create index if not exists idx_items_title_search on public.items using gin (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(catalogue_description, '') || ' ' || coalesce(physical_details, '') || ' ' || coalesce(beaumont_notes, '') || ' ' || coalesce(item_references, '') || ' ' || coalesce(reference_number, '')));
 create index if not exists idx_item_images_item_id on public.item_images (item_id);
 create index if not exists idx_item_images_order on public.item_images (item_id, display_order, created_at);
 create index if not exists idx_tags_name on public.tags (name);
@@ -189,8 +193,6 @@ create index if not exists idx_journal_articles_date on public.journal_articles 
 create index if not exists idx_journal_articles_published_date on public.journal_articles (published, article_date desc);
 create index if not exists idx_journal_articles_featured on public.journal_articles (featured, published, article_date desc);
 create index if not exists idx_journal_articles_tags on public.journal_articles using gin (tags);
-create index if not exists idx_currently_seeking_active_order on public.currently_seeking (active, sort_order, created_at);
-
 -- Seed tags.
 insert into public.tags (name) values
   ('Rare Books'),
@@ -232,7 +234,6 @@ alter table public.item_tags enable row level security;
 alter table public.collections enable row level security;
 alter table public.enquiries enable row level security;
 alter table public.journal_articles enable row level security;
-alter table public.currently_seeking enable row level security;
 alter table public.site_settings enable row level security;
 
 drop policy if exists "Public read items" on public.items;
@@ -270,12 +271,6 @@ create policy "Public read published journal articles" on public.journal_article
 for select to anon, authenticated
 using (published = true);
 
-drop policy if exists "Public read active currently seeking" on public.currently_seeking;
-drop policy if exists "Public read currently seeking" on public.currently_seeking;
-create policy "Public read currently seeking" on public.currently_seeking
-for select to anon, authenticated
-using (true);
-
 drop policy if exists "Admin manage items" on public.items;
 create policy "Admin manage items" on public.items
 for all to authenticated
@@ -308,12 +303,6 @@ with check (true);
 
 drop policy if exists "Admin manage journal articles" on public.journal_articles;
 create policy "Admin manage journal articles" on public.journal_articles
-for all to authenticated
-using (true)
-with check (true);
-
-drop policy if exists "Admin manage currently seeking" on public.currently_seeking;
-create policy "Admin manage currently seeking" on public.currently_seeking
 for all to authenticated
 using (true)
 with check (true);

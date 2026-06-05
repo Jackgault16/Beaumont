@@ -15,48 +15,6 @@ const DEFAULT_COLLECTIONS = [
   'Travel Collection',
 ];
 const ACQUISITION_SOURCES = ['Auction', 'Private Collection', 'Estate Sale', 'Dealer', 'Book Fair', 'Direct Purchase'];
-const DEFAULT_SEEKING_ITEMS = [
-  {
-    id: 'default-seeking-trench-maps',
-    title: 'First World War Trench Maps',
-    description: 'Especially annotated examples, officer-used maps and material connected to the Somme, Ypres, Arras and Messines.',
-    image_url: '',
-    active: true,
-    sort_order: 1,
-  },
-  {
-    id: 'default-seeking-military-manuscripts',
-    title: 'Military Manuscripts',
-    description: 'Diaries, letters, notebooks, orders, operational papers and personal archives connected to military service.',
-    image_url: '',
-    active: true,
-    sort_order: 2,
-  },
-  {
-    id: 'default-seeking-estate-libraries',
-    title: 'Estate Libraries',
-    description: 'Inherited collections, private libraries and groups of books requiring cataloguing, valuation or historical assessment.',
-    image_url: '',
-    active: true,
-    sort_order: 3,
-  },
-  {
-    id: 'default-seeking-maps-atlases',
-    title: 'Historical Maps & Atlases',
-    description: 'Cartographic material with strong decorative, military, political or geographical importance.',
-    image_url: '',
-    active: true,
-    sort_order: 4,
-  },
-  {
-    id: 'default-seeking-provenance-books',
-    title: 'Rare Books with Provenance',
-    description: 'Books bearing ownership inscriptions, bookplates, armorial bindings, marginalia or documented collection history.',
-    image_url: '',
-    active: true,
-    sort_order: 5,
-  },
-];
 const SAMPLE_ARTICLES = [
   {
     id: 'sample-article-maps',
@@ -292,8 +250,6 @@ const state = {
   collections: [],
   articles: [],
   enquiries: [],
-  seekingItems: [],
-  seekingHasAdminData: false,
   settings: null,
   featuredCarousel: {
     items: [],
@@ -305,7 +261,6 @@ const state = {
   editingItemId: null,
   editingTagId: null,
   editingCollectionId: null,
-  editingSeekingId: null,
   articleEditor: null,
   articleEditorReady: null,
   articleAdditionalImages: [],
@@ -376,6 +331,22 @@ function cleanText(value) {
   return isMeaningfulText(value) ? String(value).trim() : '';
 }
 
+function catalogueDescription(item) {
+  const primary = cleanText(item.catalogue_description);
+  if (primary) return primary;
+  return [cleanText(item.short_description), cleanText(item.full_description)].filter(Boolean).join('\n\n');
+}
+
+function plainTextExcerpt(value, maxLength = 160) {
+  const text = String(value || '')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/[*_`>#-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+}
+
 function cataloguePlaceholder(className = '') {
   return `
     <div class="beaumont-image-placeholder ${className}">
@@ -399,10 +370,12 @@ function itemSearchText(item) {
     item.subcategory,
     item.year,
     item.collection_name,
-    item.short_description,
-    item.full_description,
+    item.catalogue_description,
+    item.physical_details,
+    item.beaumont_notes,
     item.provenance,
     item.condition,
+    item.item_references,
     ...itemTags(item),
   ].join(' ').toLowerCase();
 }
@@ -448,34 +421,6 @@ async function loadCollections() {
   if (error) throw error;
   state.collections = data || [];
   return state.collections;
-}
-
-function sortedSeekingItems(items) {
-  return [...items].sort((a, b) => {
-    const orderDiff = Number(a.sort_order || 0) - Number(b.sort_order || 0);
-    if (orderDiff) return orderDiff;
-    return String(a.title || '').localeCompare(String(b.title || ''));
-  });
-}
-
-async function loadSeekingItems(includeInactive = false) {
-  const client = getClient();
-  if (!client) {
-    state.seekingHasAdminData = false;
-    state.seekingItems = DEFAULT_SEEKING_ITEMS;
-    return state.seekingItems;
-  }
-  const query = client.from('currently_seeking').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true });
-  const { data, error } = await query;
-  if (error) {
-    state.seekingHasAdminData = false;
-    state.seekingItems = DEFAULT_SEEKING_ITEMS;
-    return state.seekingItems;
-  }
-  const records = data || [];
-  state.seekingHasAdminData = records.length > 0;
-  state.seekingItems = records.length ? (includeInactive ? records : records.filter((item) => item.active)) : DEFAULT_SEEKING_ITEMS;
-  return state.seekingItems;
 }
 
 async function seedDefaults() {
@@ -536,6 +481,7 @@ function fillArticleTagSelect(selected = []) {
 function renderFeaturedCard(item) {
   const image = realItemImage(item);
   const imageStyle = image ? ` style="background-image:url('${escapeHtml(image)}')"` : '';
+  const description = plainTextExcerpt(catalogueDescription(item), 130);
   return `
     <article class="catalogue-card">
       <a class="catalogue-card__image${image ? ' catalogue-card__image--photo' : ' catalogue-card__image--empty'}"${imageStyle} href="catalogue.html?item=${item.id}" aria-label="${escapeHtml(item.title)}">
@@ -544,11 +490,11 @@ function renderFeaturedCard(item) {
       <div class="catalogue-card__body">
         <div class="catalogue-card__entry">
           <p class="catalogue-card__label">${escapeHtml(item.reference_number || 'Catalogue entry')}</p>
-          <p class="catalogue-card__meta">${escapeHtml(item.year || '')} · ${escapeHtml(item.category || '')}</p>
-        </div>
-        <h4>${escapeHtml(item.title)}</h4>
-        <p>${escapeHtml(item.short_description)}</p>
-        <div class="catalogue-card__footer">
+        <p class="catalogue-card__meta">${escapeHtml(item.year || '')} · ${escapeHtml(item.category || '')}</p>
+      </div>
+      <h4>${escapeHtml(item.title)}</h4>
+      ${description ? `<p>${escapeHtml(description)}</p>` : ''}
+      <div class="catalogue-card__footer">
           <span class="catalogue-card__price">${formatPrice(item.price)}</span>
           <a class="button button--ghost" href="${enquiryUrl(item)}">Enquire</a>
         </div>
@@ -628,7 +574,7 @@ async function initHomepageInventory() {
 function renderCatalogueCard(item, index = 0) {
   const image = realItemImage(item);
   const tags = itemTags(item);
-  const description = cleanText(item.short_description);
+  const description = plainTextExcerpt(catalogueDescription(item), 180);
   const featured = index === 0;
   return `
     <article class="catalogue-item${featured ? ' catalogue-item--featured' : ''}">
@@ -701,16 +647,19 @@ function renderItemDetail(item) {
   const images = [primaryImage, ...itemImages(item)].filter(Boolean);
   state.detailImages = images;
   state.detailImageIndex = 0;
-  const tags = itemTags(item);
-  const descriptionParts = [cleanText(item.short_description), cleanText(item.full_description)].filter(Boolean);
+  const description = catalogueDescription(item);
+  const physicalDetails = cleanText(item.physical_details);
   const provenance = cleanText(item.provenance);
   const condition = cleanText(item.condition);
+  const beaumontNotes = cleanText(item.beaumont_notes);
+  const references = cleanText(item.item_references);
   const sections = [
-    descriptionParts.length ? { title: 'Description', body: descriptionParts.map((part) => `<p>${escapeHtml(part)}</p>`).join('') } : null,
-    provenance ? { title: 'Provenance', body: `<p>${escapeHtml(provenance)}</p>` } : null,
+    description ? { title: 'Catalogue Description', body: markdownToHtml(description) } : null,
+    physicalDetails ? { title: 'Physical Details', body: `<p>${escapeHtml(physicalDetails)}</p>` } : null,
     condition ? { title: 'Condition', body: `<p>${escapeHtml(condition)}</p>` } : null,
-    item.collection_name ? { title: 'Collection', body: `<p><span class="item-detail__collection-badge">${escapeHtml(item.collection_name)}</span></p>` } : null,
-    tags.length ? { title: 'Tags', body: `<div class="item-detail__tags">${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('')}</div>` } : null,
+    provenance ? { title: 'Provenance', body: `<p>${escapeHtml(provenance)}</p>` } : null,
+    beaumontNotes ? { title: 'Beaumont Notes', body: `<p>${escapeHtml(beaumontNotes)}</p>` } : null,
+    references ? { title: 'References', body: `<p>${escapeHtml(references)}</p>` } : null,
   ].filter(Boolean);
   listing.classList.add('hidden');
   detail.classList.remove('hidden');
@@ -755,7 +704,7 @@ function renderItemDetail(item) {
             </section>
           `).join('')}
         </div>
-        <a class="button button--primary item-detail__enquire" href="${enquiryUrl(item)}">Enquire</a>
+        <a class="button button--primary item-detail__enquire" href="${enquiryUrl(item)}">Enquire About This Item</a>
       </div>
     </article>
   `;
@@ -902,10 +851,12 @@ function itemPayload(main_image_url) {
     subcategory: document.getElementById('subcategory').value.trim(),
     year: document.getElementById('year').value.trim(),
     price: document.getElementById('price').value ? Number(document.getElementById('price').value) : null,
-    short_description: document.getElementById('short-description').value.trim(),
-    full_description: document.getElementById('full-description').value.trim(),
+    catalogue_description: document.getElementById('catalogue-description').value.trim(),
+    physical_details: document.getElementById('physical-details').value.trim(),
+    beaumont_notes: document.getElementById('beaumont-notes').value.trim(),
     provenance: document.getElementById('provenance').value.trim(),
     condition: document.getElementById('condition').value.trim(),
+    item_references: document.getElementById('references').value.trim(),
     collection_name: document.getElementById('collection-name').value,
     acquisition_source: document.getElementById('acquisition-source').value,
     featured: document.getElementById('featured').checked,
@@ -920,8 +871,8 @@ async function saveItem(event) {
   const client = requireClient();
   setStatus('Saving object...');
   try {
-    if (!document.getElementById('title').value.trim() || !document.getElementById('category').value || !document.getElementById('short-description').value.trim()) {
-      throw new Error('Missing required field. Title, category and short description are required.');
+    if (!document.getElementById('title').value.trim() || !document.getElementById('category').value || !document.getElementById('catalogue-description').value.trim()) {
+      throw new Error('Missing required field. Title, category and catalogue description are required.');
     }
     const { main_image_url, galleryUrls } = await uploadImagePayload();
     let itemId = state.editingItemId;
@@ -1017,10 +968,12 @@ function populateItemForm(item) {
   document.getElementById('subcategory').value = item.subcategory || '';
   document.getElementById('year').value = item.year || '';
   document.getElementById('price').value = item.price || '';
-  document.getElementById('short-description').value = item.short_description || '';
-  document.getElementById('full-description').value = item.full_description || '';
+  document.getElementById('catalogue-description').value = catalogueDescription(item);
+  document.getElementById('physical-details').value = item.physical_details || '';
+  document.getElementById('beaumont-notes').value = item.beaumont_notes || '';
   document.getElementById('provenance').value = item.provenance || '';
   document.getElementById('condition').value = item.condition || '';
+  document.getElementById('references').value = item.item_references || '';
   document.getElementById('collection-name').value = item.collection_name || '';
   document.getElementById('acquisition-source').value = item.acquisition_source || '';
   document.getElementById('featured').checked = Boolean(item.featured);
@@ -1085,133 +1038,6 @@ function renderCollectionManager() {
       </div>
     </article>
   `).join('');
-}
-
-async function uploadSeekingImagePayload() {
-  const input = document.getElementById('seeking-image');
-  const current = document.getElementById('current-seeking-image')?.value || '';
-  const remove = document.getElementById('remove-seeking-image')?.checked || false;
-  if (remove) return '';
-  if (input?.files?.[0]) return uploadFile(input.files[0], 'currently-seeking');
-  return current;
-}
-
-function seekingPayload(image_url) {
-  return {
-    title: document.getElementById('seeking-title').value.trim(),
-    description: document.getElementById('seeking-description').value.trim(),
-    image_url,
-    active: document.getElementById('seeking-active').checked,
-    sort_order: Number(document.getElementById('seeking-sort-order').value || 0),
-  };
-}
-
-function resetSeekingForm() {
-  state.editingSeekingId = null;
-  document.getElementById('seeking-form')?.reset();
-  document.getElementById('seeking-id').value = '';
-  document.getElementById('current-seeking-image').value = '';
-  if (document.getElementById('remove-seeking-image')) document.getElementById('remove-seeking-image').checked = false;
-  if (document.getElementById('seeking-active')) document.getElementById('seeking-active').checked = true;
-  if (document.getElementById('seeking-sort-order')) document.getElementById('seeking-sort-order').value = String((state.seekingItems.length || 0) + 1);
-  document.getElementById('seeking-submit-label').textContent = 'Add Seeking Item';
-}
-
-function renderSeekingManager() {
-  const container = document.getElementById('seeking-container');
-  if (!container) return;
-  container.innerHTML = sortedSeekingItems(state.seekingItems).map((item, index, items) => {
-    const persisted = isUuid(item.id);
-    return `
-      <article class="admin-row">
-        <div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.description || '')}</span></div>
-        <div>${item.active ? 'Active' : 'Inactive'}</div>
-        <div>Order ${escapeHtml(item.sort_order || index + 1)}</div>
-        <div class="admin-row__actions">
-          ${persisted ? `
-            <button class="button button--ghost" type="button" data-move-seeking="${item.id}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>Up</button>
-            <button class="button button--ghost" type="button" data-move-seeking="${item.id}" data-direction="1" ${index === items.length - 1 ? 'disabled' : ''}>Down</button>
-            <button class="button button--secondary" type="button" data-edit-seeking="${item.id}">Edit</button>
-            <button class="button button--ghost" type="button" data-toggle-seeking="${item.id}">${item.active ? 'Deactivate' : 'Activate'}</button>
-            <button class="button button--danger" type="button" data-delete-seeking="${item.id}">Delete</button>
-          ` : '<span class="admin-row__hint">Default homepage item</span>'}
-        </div>
-      </article>
-    `;
-  }).join('');
-}
-
-function populateSeekingForm(item) {
-  if (!isUuid(item.id)) {
-    setStatus('Default seeking items can be used as a reference, but cannot be edited until saved as admin data.', 'error');
-    return;
-  }
-  state.editingSeekingId = item.id;
-  document.getElementById('seeking-id').value = item.id;
-  document.getElementById('seeking-title').value = item.title || '';
-  document.getElementById('seeking-description').value = item.description || '';
-  document.getElementById('current-seeking-image').value = item.image_url || '';
-  document.getElementById('seeking-sort-order').value = item.sort_order || 0;
-  document.getElementById('seeking-active').checked = item.active !== false;
-  if (document.getElementById('remove-seeking-image')) document.getElementById('remove-seeking-image').checked = false;
-  document.getElementById('seeking-submit-label').textContent = 'Update Seeking Item';
-}
-
-async function saveSeekingItem(event) {
-  event.preventDefault();
-  const client = requireClient();
-  try {
-    if (!document.getElementById('seeking-title').value.trim() || !document.getElementById('seeking-description').value.trim()) {
-      throw new Error('Missing required field. Title and description are required.');
-    }
-    const imageUrl = await uploadSeekingImagePayload();
-    const id = state.editingSeekingId;
-    const request = id
-      ? client.from('currently_seeking').update(seekingPayload(imageUrl)).eq('id', id)
-      : client.from('currently_seeking').insert(seekingPayload(imageUrl));
-    const { error } = await request;
-    if (error) throw error;
-    resetSeekingForm();
-    await loadSeekingItems(true);
-    renderSeekingManager();
-    setStatus('Currently Seeking item saved.', 'success');
-  } catch (error) {
-    setStatus(error.message, 'error');
-  }
-}
-
-async function updateSeekingItem(id, payload) {
-  const { error } = await requireClient().from('currently_seeking').update(payload).eq('id', id);
-  if (error) throw error;
-  await loadSeekingItems(true);
-  renderSeekingManager();
-}
-
-async function deleteSeekingItem(id) {
-  if (!window.confirm('Delete this seeking item?')) return;
-  const { error } = await requireClient().from('currently_seeking').delete().eq('id', id);
-  if (error) throw error;
-  await loadSeekingItems(true);
-  renderSeekingManager();
-  setStatus('Currently Seeking item deleted.', 'success');
-}
-
-async function moveSeekingItem(id, direction) {
-  const items = sortedSeekingItems(state.seekingItems).filter((item) => isUuid(item.id));
-  const index = items.findIndex((item) => item.id === id);
-  const targetIndex = index + direction;
-  if (index < 0 || targetIndex < 0 || targetIndex >= items.length) return;
-  const current = items[index];
-  const target = items[targetIndex];
-  const client = requireClient();
-  const [currentResult, targetResult] = await Promise.all([
-    client.from('currently_seeking').update({ sort_order: target.sort_order }).eq('id', current.id),
-    client.from('currently_seeking').update({ sort_order: current.sort_order }).eq('id', target.id),
-  ]);
-  if (currentResult.error) throw currentResult.error;
-  if (targetResult.error) throw targetResult.error;
-  await loadSeekingItems(true);
-  renderSeekingManager();
 }
 
 async function loadArticles(includeUnpublished = false) {
@@ -1489,29 +1315,6 @@ async function initHomepageJournal() {
   if (!grid) return;
   await loadArticles(false);
   grid.innerHTML = state.articles.slice(0, 3).map((article) => renderArticleCard(article, true)).join('');
-}
-
-function renderSeekingCard(item) {
-  const image = cleanText(item.image_url);
-  return `
-    <article class="currently-seeking-card${image ? ' currently-seeking-card--image' : ''}">
-      ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.remove();" />` : ''}
-      <div>
-        <h4>${escapeHtml(item.title)}</h4>
-        <p>${escapeHtml(item.description)}</p>
-      </div>
-    </article>
-  `;
-}
-
-async function initHomepageSeeking() {
-  const container = document.getElementById('currently-seeking-list');
-  if (!container) return;
-  await loadSeekingItems(false);
-  const active = sortedSeekingItems(state.seekingItems.filter((item) => item.active !== false));
-  container.innerHTML = active.length
-    ? active.map(renderSeekingCard).join('')
-    : state.seekingHasAdminData ? '<p class="admin-empty">No seeking items are currently active.</p>' : sortedSeekingItems(DEFAULT_SEEKING_ITEMS).map(renderSeekingCard).join('');
 }
 
 function normalizeArticleImages(images) {
@@ -2503,7 +2306,6 @@ function prefillContactReference() {
 initHomepageInventory();
 initCataloguePage();
 initHomepageJournal();
-initHomepageSeeking();
 initJournalPage();
 initAdminPage();
 prefillContactReference();
