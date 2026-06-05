@@ -93,11 +93,23 @@ create table if not exists public.journal_articles (
   category text not null,
   article_date date not null default current_date,
   featured_image_url text,
+  additional_image_urls text[] not null default '{}',
   summary text not null,
   content text not null,
   tags text[] not null default '{}',
   featured boolean not null default false,
   published boolean not null default false
+);
+
+create table if not exists public.currently_seeking (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  title text not null,
+  description text not null,
+  image_url text,
+  active boolean not null default true,
+  sort_order integer not null default 0
 );
 
 create table if not exists public.site_settings (
@@ -121,6 +133,7 @@ alter table public.enquiries add column if not exists internal_notes text;
 alter table public.enquiries add column if not exists description text;
 alter table public.enquiries add column if not exists image_urls text[] not null default '{}';
 alter table public.items add column if not exists archive_reference boolean not null default false;
+alter table public.journal_articles add column if not exists additional_image_urls text[] not null default '{}';
 
 -- Automatic stock numbers: BM-2026-001, BM-2026-002, etc.
 create sequence if not exists public.bm_stock_number_seq start 1;
@@ -176,33 +189,30 @@ create index if not exists idx_journal_articles_date on public.journal_articles 
 create index if not exists idx_journal_articles_published_date on public.journal_articles (published, article_date desc);
 create index if not exists idx_journal_articles_featured on public.journal_articles (featured, published, article_date desc);
 create index if not exists idx_journal_articles_tags on public.journal_articles using gin (tags);
+create index if not exists idx_currently_seeking_active_order on public.currently_seeking (active, sort_order, created_at);
 
 -- Seed tags.
 insert into public.tags (name) values
+  ('Rare Books'),
+  ('Provenance'),
+  ('First World War'),
+  ('Second World War'),
   ('Military History'),
-  ('WWI'),
-  ('WWII'),
-  ('Napoleonic Wars'),
-  ('Victorian'),
-  ('Georgian'),
-  ('18th Century'),
-  ('19th Century'),
-  ('20th Century'),
-  ('Irish History'),
-  ('British History'),
-  ('Exploration'),
-  ('Travel'),
   ('Maps'),
   ('Trench Maps'),
-  ('Regimental History'),
-  ('Signed Edition'),
-  ('First Edition'),
-  ('Rare Book'),
-  ('Historical Document'),
-  ('Historical Object'),
-  ('Archive Material'),
-  ('Biography'),
-  ('Memoir')
+  ('Cartography'),
+  ('Manuscripts'),
+  ('Antiquarian Books'),
+  ('Collecting'),
+  ('Bibliography'),
+  ('Historical Documents'),
+  ('Archives'),
+  ('Research'),
+  ('Conservation'),
+  ('Book History'),
+  ('Printing History'),
+  ('Ephemera'),
+  ('Battlefield Archaeology')
 on conflict (name) do nothing;
 
 -- Seed collections.
@@ -222,6 +232,7 @@ alter table public.item_tags enable row level security;
 alter table public.collections enable row level security;
 alter table public.enquiries enable row level security;
 alter table public.journal_articles enable row level security;
+alter table public.currently_seeking enable row level security;
 alter table public.site_settings enable row level security;
 
 drop policy if exists "Public read items" on public.items;
@@ -259,6 +270,12 @@ create policy "Public read published journal articles" on public.journal_article
 for select to anon, authenticated
 using (published = true);
 
+drop policy if exists "Public read active currently seeking" on public.currently_seeking;
+drop policy if exists "Public read currently seeking" on public.currently_seeking;
+create policy "Public read currently seeking" on public.currently_seeking
+for select to anon, authenticated
+using (true);
+
 drop policy if exists "Admin manage items" on public.items;
 create policy "Admin manage items" on public.items
 for all to authenticated
@@ -291,6 +308,12 @@ with check (true);
 
 drop policy if exists "Admin manage journal articles" on public.journal_articles;
 create policy "Admin manage journal articles" on public.journal_articles
+for all to authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Admin manage currently seeking" on public.currently_seeking;
+create policy "Admin manage currently seeking" on public.currently_seeking
 for all to authenticated
 using (true)
 with check (true);

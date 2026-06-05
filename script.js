@@ -2,11 +2,10 @@
 const ADMIN_USERNAME = 'admin';
 const DEFAULT_CATEGORIES = ['Books', 'Maps', 'Documents', 'Historical Objects'];
 const DEFAULT_TAGS = [
-  'Military History', 'WWI', 'WWII', 'Napoleonic Wars', 'Victorian', 'Georgian',
-  '18th Century', '19th Century', '20th Century', 'Irish History', 'British History',
-  'Exploration', 'Travel', 'Maps', 'Trench Maps', 'Regimental History', 'Signed Edition',
-  'First Edition', 'Rare Book', 'Historical Document', 'Historical Object', 'Archive Material',
-  'Biography', 'Memoir',
+  'Rare Books', 'Provenance', 'First World War', 'Second World War', 'Military History',
+  'Maps', 'Trench Maps', 'Cartography', 'Manuscripts', 'Antiquarian Books', 'Collecting',
+  'Bibliography', 'Historical Documents', 'Archives', 'Research', 'Conservation',
+  'Book History', 'Printing History', 'Ephemera', 'Battlefield Archaeology',
 ];
 const DEFAULT_COLLECTIONS = [
   'Western Front Collection',
@@ -16,6 +15,48 @@ const DEFAULT_COLLECTIONS = [
   'Travel Collection',
 ];
 const ACQUISITION_SOURCES = ['Auction', 'Private Collection', 'Estate Sale', 'Dealer', 'Book Fair', 'Direct Purchase'];
+const DEFAULT_SEEKING_ITEMS = [
+  {
+    id: 'default-seeking-trench-maps',
+    title: 'First World War Trench Maps',
+    description: 'Especially annotated examples, officer-used maps and material connected to the Somme, Ypres, Arras and Messines.',
+    image_url: '',
+    active: true,
+    sort_order: 1,
+  },
+  {
+    id: 'default-seeking-military-manuscripts',
+    title: 'Military Manuscripts',
+    description: 'Diaries, letters, notebooks, orders, operational papers and personal archives connected to military service.',
+    image_url: '',
+    active: true,
+    sort_order: 2,
+  },
+  {
+    id: 'default-seeking-estate-libraries',
+    title: 'Estate Libraries',
+    description: 'Inherited collections, private libraries and groups of books requiring cataloguing, valuation or historical assessment.',
+    image_url: '',
+    active: true,
+    sort_order: 3,
+  },
+  {
+    id: 'default-seeking-maps-atlases',
+    title: 'Historical Maps & Atlases',
+    description: 'Cartographic material with strong decorative, military, political or geographical importance.',
+    image_url: '',
+    active: true,
+    sort_order: 4,
+  },
+  {
+    id: 'default-seeking-provenance-books',
+    title: 'Rare Books with Provenance',
+    description: 'Books bearing ownership inscriptions, bookplates, armorial bindings, marginalia or documented collection history.',
+    image_url: '',
+    active: true,
+    sort_order: 5,
+  },
+];
 const SAMPLE_ARTICLES = [
   {
     id: 'sample-article-maps',
@@ -251,6 +292,8 @@ const state = {
   collections: [],
   articles: [],
   enquiries: [],
+  seekingItems: [],
+  seekingHasAdminData: false,
   settings: null,
   featuredCarousel: {
     items: [],
@@ -262,8 +305,10 @@ const state = {
   editingItemId: null,
   editingTagId: null,
   editingCollectionId: null,
+  editingSeekingId: null,
   articleEditor: null,
   articleEditorReady: null,
+  articleAdditionalImages: [],
 };
 
 function hasSupabaseConfig() {
@@ -405,6 +450,34 @@ async function loadCollections() {
   return state.collections;
 }
 
+function sortedSeekingItems(items) {
+  return [...items].sort((a, b) => {
+    const orderDiff = Number(a.sort_order || 0) - Number(b.sort_order || 0);
+    if (orderDiff) return orderDiff;
+    return String(a.title || '').localeCompare(String(b.title || ''));
+  });
+}
+
+async function loadSeekingItems(includeInactive = false) {
+  const client = getClient();
+  if (!client) {
+    state.seekingHasAdminData = false;
+    state.seekingItems = DEFAULT_SEEKING_ITEMS;
+    return state.seekingItems;
+  }
+  const query = client.from('currently_seeking').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+  const { data, error } = await query;
+  if (error) {
+    state.seekingHasAdminData = false;
+    state.seekingItems = DEFAULT_SEEKING_ITEMS;
+    return state.seekingItems;
+  }
+  const records = data || [];
+  state.seekingHasAdminData = records.length > 0;
+  state.seekingItems = records.length ? (includeInactive ? records : records.filter((item) => item.active)) : DEFAULT_SEEKING_ITEMS;
+  return state.seekingItems;
+}
+
 async function seedDefaults() {
   const client = getClient();
   if (!client) return;
@@ -416,6 +489,48 @@ function optionList(values, placeholder) {
   return [`<option value="">${placeholder}</option>`]
     .concat(values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
     .join('');
+}
+
+function normalizeTagValues(tags) {
+  if (Array.isArray(tags)) return tags.map((tag) => String(tag || '').trim()).filter(Boolean);
+  return String(tags || '').split(',').map((tag) => tag.trim()).filter(Boolean);
+}
+
+function articleTagOptions(extraTags = []) {
+  return [...new Set([
+    ...state.tags.map((tag) => tag.name).filter(Boolean),
+    ...DEFAULT_TAGS,
+    ...normalizeTagValues(extraTags),
+  ])].sort((a, b) => a.localeCompare(b));
+}
+
+function selectedArticleTags() {
+  return [...document.querySelectorAll('input[name="article-tags"]:checked')]
+    .map((input) => input.value)
+    .filter(Boolean);
+}
+
+function updateArticleTagSummary() {
+  const summary = document.getElementById('article-tags-summary');
+  if (!summary) return;
+  const selected = selectedArticleTags();
+  summary.textContent = selected.length ? selected.join(', ') : 'Select tags';
+}
+
+function fillArticleTagSelect(selected = []) {
+  const menu = document.getElementById('article-tags-menu');
+  if (!menu) return;
+  const selectedTags = normalizeTagValues(selected);
+  const selectedSet = new Set(selectedTags);
+  menu.innerHTML = articleTagOptions(selectedTags)
+    .map((tag) => `
+      <label class="article-tag-dropdown__option">
+        <input type="checkbox" name="article-tags" value="${escapeHtml(tag)}"${selectedSet.has(tag) ? ' checked' : ''} />
+        <span>${escapeHtml(tag)}</span>
+      </label>
+    `)
+    .join('');
+  updateArticleTagSummary();
 }
 
 function renderFeaturedCard(item) {
@@ -721,6 +836,7 @@ function fillAdminOptions() {
   if (category) category.innerHTML = optionList(DEFAULT_CATEGORIES, 'Select category');
   if (collection) collection.innerHTML = optionList(state.collections.map((item) => item.name), 'Select collection');
   if (acquisition) acquisition.innerHTML = optionList(ACQUISITION_SOURCES, 'Select acquisition source');
+  fillArticleTagSelect(selectedArticleTags());
 }
 
 function fillTagChecklist() {
@@ -894,6 +1010,7 @@ function renderSoldItems() {
 }
 
 function populateItemForm(item) {
+  showAdminSection('items');
   state.editingItemId = item.id;
   document.getElementById('title').value = item.title || '';
   document.getElementById('category').value = item.category || '';
@@ -970,6 +1087,133 @@ function renderCollectionManager() {
   `).join('');
 }
 
+async function uploadSeekingImagePayload() {
+  const input = document.getElementById('seeking-image');
+  const current = document.getElementById('current-seeking-image')?.value || '';
+  const remove = document.getElementById('remove-seeking-image')?.checked || false;
+  if (remove) return '';
+  if (input?.files?.[0]) return uploadFile(input.files[0], 'currently-seeking');
+  return current;
+}
+
+function seekingPayload(image_url) {
+  return {
+    title: document.getElementById('seeking-title').value.trim(),
+    description: document.getElementById('seeking-description').value.trim(),
+    image_url,
+    active: document.getElementById('seeking-active').checked,
+    sort_order: Number(document.getElementById('seeking-sort-order').value || 0),
+  };
+}
+
+function resetSeekingForm() {
+  state.editingSeekingId = null;
+  document.getElementById('seeking-form')?.reset();
+  document.getElementById('seeking-id').value = '';
+  document.getElementById('current-seeking-image').value = '';
+  if (document.getElementById('remove-seeking-image')) document.getElementById('remove-seeking-image').checked = false;
+  if (document.getElementById('seeking-active')) document.getElementById('seeking-active').checked = true;
+  if (document.getElementById('seeking-sort-order')) document.getElementById('seeking-sort-order').value = String((state.seekingItems.length || 0) + 1);
+  document.getElementById('seeking-submit-label').textContent = 'Add Seeking Item';
+}
+
+function renderSeekingManager() {
+  const container = document.getElementById('seeking-container');
+  if (!container) return;
+  container.innerHTML = sortedSeekingItems(state.seekingItems).map((item, index, items) => {
+    const persisted = isUuid(item.id);
+    return `
+      <article class="admin-row">
+        <div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.description || '')}</span></div>
+        <div>${item.active ? 'Active' : 'Inactive'}</div>
+        <div>Order ${escapeHtml(item.sort_order || index + 1)}</div>
+        <div class="admin-row__actions">
+          ${persisted ? `
+            <button class="button button--ghost" type="button" data-move-seeking="${item.id}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>Up</button>
+            <button class="button button--ghost" type="button" data-move-seeking="${item.id}" data-direction="1" ${index === items.length - 1 ? 'disabled' : ''}>Down</button>
+            <button class="button button--secondary" type="button" data-edit-seeking="${item.id}">Edit</button>
+            <button class="button button--ghost" type="button" data-toggle-seeking="${item.id}">${item.active ? 'Deactivate' : 'Activate'}</button>
+            <button class="button button--danger" type="button" data-delete-seeking="${item.id}">Delete</button>
+          ` : '<span class="admin-row__hint">Default homepage item</span>'}
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+function populateSeekingForm(item) {
+  if (!isUuid(item.id)) {
+    setStatus('Default seeking items can be used as a reference, but cannot be edited until saved as admin data.', 'error');
+    return;
+  }
+  state.editingSeekingId = item.id;
+  document.getElementById('seeking-id').value = item.id;
+  document.getElementById('seeking-title').value = item.title || '';
+  document.getElementById('seeking-description').value = item.description || '';
+  document.getElementById('current-seeking-image').value = item.image_url || '';
+  document.getElementById('seeking-sort-order').value = item.sort_order || 0;
+  document.getElementById('seeking-active').checked = item.active !== false;
+  if (document.getElementById('remove-seeking-image')) document.getElementById('remove-seeking-image').checked = false;
+  document.getElementById('seeking-submit-label').textContent = 'Update Seeking Item';
+}
+
+async function saveSeekingItem(event) {
+  event.preventDefault();
+  const client = requireClient();
+  try {
+    if (!document.getElementById('seeking-title').value.trim() || !document.getElementById('seeking-description').value.trim()) {
+      throw new Error('Missing required field. Title and description are required.');
+    }
+    const imageUrl = await uploadSeekingImagePayload();
+    const id = state.editingSeekingId;
+    const request = id
+      ? client.from('currently_seeking').update(seekingPayload(imageUrl)).eq('id', id)
+      : client.from('currently_seeking').insert(seekingPayload(imageUrl));
+    const { error } = await request;
+    if (error) throw error;
+    resetSeekingForm();
+    await loadSeekingItems(true);
+    renderSeekingManager();
+    setStatus('Currently Seeking item saved.', 'success');
+  } catch (error) {
+    setStatus(error.message, 'error');
+  }
+}
+
+async function updateSeekingItem(id, payload) {
+  const { error } = await requireClient().from('currently_seeking').update(payload).eq('id', id);
+  if (error) throw error;
+  await loadSeekingItems(true);
+  renderSeekingManager();
+}
+
+async function deleteSeekingItem(id) {
+  if (!window.confirm('Delete this seeking item?')) return;
+  const { error } = await requireClient().from('currently_seeking').delete().eq('id', id);
+  if (error) throw error;
+  await loadSeekingItems(true);
+  renderSeekingManager();
+  setStatus('Currently Seeking item deleted.', 'success');
+}
+
+async function moveSeekingItem(id, direction) {
+  const items = sortedSeekingItems(state.seekingItems).filter((item) => isUuid(item.id));
+  const index = items.findIndex((item) => item.id === id);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= items.length) return;
+  const current = items[index];
+  const target = items[targetIndex];
+  const client = requireClient();
+  const [currentResult, targetResult] = await Promise.all([
+    client.from('currently_seeking').update({ sort_order: target.sort_order }).eq('id', current.id),
+    client.from('currently_seeking').update({ sort_order: current.sort_order }).eq('id', target.id),
+  ]);
+  if (currentResult.error) throw currentResult.error;
+  if (targetResult.error) throw targetResult.error;
+  await loadSeekingItems(true);
+  renderSeekingManager();
+}
+
 async function loadArticles(includeUnpublished = false) {
   const client = getClient();
   if (!client) return SAMPLE_ARTICLES;
@@ -1029,7 +1273,7 @@ function renderMarkdownTable(lines) {
   `;
 }
 
-function markdownToHtml(markdown = '') {
+function markdownToBlocks(markdown = '') {
   const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
   const blocks = [];
   let i = 0;
@@ -1042,14 +1286,14 @@ function markdownToHtml(markdown = '') {
     }
 
     if (/^---+$/.test(line)) {
-      blocks.push('<hr />');
+      blocks.push({ type: 'rule', html: '<hr />' });
       i += 1;
       continue;
     }
 
     if (/^#{1,3}\s+/.test(line)) {
       const level = line.match(/^#+/)[0].length;
-      blocks.push(`<h${level}>${markdownInline(line.replace(/^#{1,3}\s+/, ''))}</h${level}>`);
+      blocks.push({ type: 'heading', html: `<h${level}>${markdownInline(line.replace(/^#{1,3}\s+/, ''))}</h${level}>` });
       i += 1;
       continue;
     }
@@ -1058,7 +1302,7 @@ function markdownToHtml(markdown = '') {
       const imageHtml = markdownInline(line);
       const next = (lines[i + 1] || '').trim();
       const caption = /^\*[^*].*\*$/.test(next) ? next.replace(/^\*|\*$/g, '') : '';
-      blocks.push(`<figure>${imageHtml}${caption ? `<figcaption>${markdownInline(caption)}</figcaption>` : ''}</figure>`);
+      blocks.push({ type: 'figure', html: `<figure>${imageHtml}${caption ? `<figcaption>${markdownInline(caption)}</figcaption>` : ''}</figure>` });
       i += caption ? 2 : 1;
       continue;
     }
@@ -1069,7 +1313,7 @@ function markdownToHtml(markdown = '') {
         tableLines.push(lines[i]);
         i += 1;
       }
-      blocks.push(renderMarkdownTable(tableLines));
+      blocks.push({ type: 'table', html: renderMarkdownTable(tableLines) });
       continue;
     }
 
@@ -1081,7 +1325,7 @@ function markdownToHtml(markdown = '') {
       }
       const quoteText = quoteLines.join(' ');
       const isPull = /^pull quote:/i.test(quoteText);
-      blocks.push(`<blockquote${isPull ? ' class="journal-pull-quote"' : ''}>${markdownInline(quoteText.replace(/^pull quote:\s*/i, ''))}</blockquote>`);
+      blocks.push({ type: 'quote', html: `<blockquote${isPull ? ' class="journal-pull-quote"' : ''}>${markdownInline(quoteText.replace(/^pull quote:\s*/i, ''))}</blockquote>` });
       continue;
     }
 
@@ -1091,7 +1335,7 @@ function markdownToHtml(markdown = '') {
         items.push(`<li>${markdownInline(lines[i].trim().replace(/^[-*]\s+/, ''))}</li>`);
         i += 1;
       }
-      blocks.push(`<ul>${items.join('')}</ul>`);
+      blocks.push({ type: 'list', html: `<ul>${items.join('')}</ul>` });
       continue;
     }
 
@@ -1101,7 +1345,7 @@ function markdownToHtml(markdown = '') {
         items.push(`<li>${markdownInline(lines[i].trim().replace(/^\d+\.\s+/, ''))}</li>`);
         i += 1;
       }
-      blocks.push(`<ol>${items.join('')}</ol>`);
+      blocks.push({ type: 'list', html: `<ol>${items.join('')}</ol>` });
       continue;
     }
 
@@ -1110,10 +1354,56 @@ function markdownToHtml(markdown = '') {
       paragraph.push(lines[i].trim());
       i += 1;
     }
-    blocks.push(`<p>${markdownInline(paragraph.join(' '))}</p>`);
+    blocks.push({ type: 'paragraph', html: `<p>${markdownInline(paragraph.join(' '))}</p>`, text: paragraph.join(' ') });
   }
 
-  return blocks.join('');
+  return blocks;
+}
+
+function markdownToHtml(markdown = '') {
+  return markdownToBlocks(markdown).map((block) => block.html).join('');
+}
+
+function additionalArticleImageHtml(url, article, index) {
+  return `
+    <figure class="journal-detail__inline-image">
+      <img src="${escapeHtml(url)}" alt="${escapeHtml(article.title)} additional image ${index + 1}" loading="lazy" onerror="this.closest('figure').remove();" />
+    </figure>
+  `;
+}
+
+function calculateArticleImageInsertionPoints(paragraphIndexes, imageCount) {
+  const placements = [];
+  const usableCount = Math.min(paragraphIndexes.length, imageCount);
+  for (let i = 0; i < usableCount; i += 1) {
+    const paragraphPosition = Math.ceil(((i + 1) * paragraphIndexes.length) / usableCount) - 1;
+    const paragraphIndex = paragraphIndexes[Math.max(0, Math.min(paragraphIndexes.length - 1, paragraphPosition))];
+    if (!placements.includes(paragraphIndex)) placements.push(paragraphIndex);
+  }
+  return placements;
+}
+
+function renderArticleContentWithImages(content = '', images = [], article = {}) {
+  const blocks = markdownToBlocks(content);
+  const imageUrls = normalizeArticleImages(images);
+  if (!imageUrls.length) return blocks.map((block) => block.html).join('');
+
+  const paragraphIndexes = blocks
+    .map((block, index) => ({ block, index }))
+    .filter(({ block }) => block.type === 'paragraph' && cleanText(block.text).replace(/\s+/g, ' ').length >= 40)
+    .map(({ index }) => index);
+  if (!paragraphIndexes.length) return blocks.map((block) => block.html).join('');
+
+  const insertionPoints = calculateArticleImageInsertionPoints(paragraphIndexes, imageUrls.length);
+  let imageIndex = 0;
+  return blocks.map((block, index) => {
+    const html = [block.html];
+    if (insertionPoints.includes(index) && imageIndex < imageUrls.length) {
+      html.push(additionalArticleImageHtml(imageUrls[imageIndex], article, imageIndex));
+      imageIndex += 1;
+    }
+    return html.join('');
+  }).join('');
 }
 
 function renderArticleCard(article, showImage = false) {
@@ -1141,6 +1431,7 @@ function renderArticleDetail(article) {
   document.querySelector('.journal-editorial-header')?.classList.add('hidden');
   const meta = [article.category || 'Journal', formatArticleDate(article.article_date)].filter(Boolean).map(escapeHtml).join(' &bull; ');
   const image = cleanText(article.featured_image_url);
+  const articleContent = renderArticleContentWithImages(article.content || '', article.additional_image_urls || [], article);
   const related = state.articles
     .filter((entry) => String(entry.id) !== String(article.id))
     .sort((a, b) => {
@@ -1161,7 +1452,7 @@ function renderArticleDetail(article) {
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(article.title)}" onerror="this.remove();" />` : ''}
       </div>
       <div class="journal-detail__rule"></div>
-      <div class="journal-detail__content">${markdownToHtml(article.content || '')}</div>
+      <div class="journal-detail__content">${articleContent}</div>
       ${related.length ? `
         <section class="journal-related" aria-label="Related articles">
           <h2>Related Articles</h2>
@@ -1200,6 +1491,95 @@ async function initHomepageJournal() {
   grid.innerHTML = state.articles.slice(0, 3).map((article) => renderArticleCard(article, true)).join('');
 }
 
+function renderSeekingCard(item) {
+  const image = cleanText(item.image_url);
+  return `
+    <article class="currently-seeking-card${image ? ' currently-seeking-card--image' : ''}">
+      ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.title)}" loading="lazy" onerror="this.remove();" />` : ''}
+      <div>
+        <h4>${escapeHtml(item.title)}</h4>
+        <p>${escapeHtml(item.description)}</p>
+      </div>
+    </article>
+  `;
+}
+
+async function initHomepageSeeking() {
+  const container = document.getElementById('currently-seeking-list');
+  if (!container) return;
+  await loadSeekingItems(false);
+  const active = sortedSeekingItems(state.seekingItems.filter((item) => item.active !== false));
+  container.innerHTML = active.length
+    ? active.map(renderSeekingCard).join('')
+    : state.seekingHasAdminData ? '<p class="admin-empty">No seeking items are currently active.</p>' : sortedSeekingItems(DEFAULT_SEEKING_ITEMS).map(renderSeekingCard).join('');
+}
+
+function normalizeArticleImages(images) {
+  return Array.isArray(images) ? images.map((url) => cleanText(url)).filter(Boolean).slice(0, 5) : [];
+}
+
+function setArticleAdditionalImages(images = []) {
+  state.articleAdditionalImages = normalizeArticleImages(images).map((url) => ({ url }));
+  const hidden = document.getElementById('current-article-additional-images');
+  if (hidden) hidden.value = JSON.stringify(normalizeArticleImages(images));
+  renderArticleAdditionalImagePreview();
+}
+
+function renderArticleAdditionalImagePreview() {
+  const preview = document.getElementById('article-additional-image-preview');
+  if (!preview) return;
+  preview.innerHTML = state.articleAdditionalImages.length ? state.articleAdditionalImages.map((image, index) => `
+    <article class="article-image-preview" draggable="true" data-article-image-index="${index}">
+      <img src="${escapeHtml(image.preview || image.url)}" alt="Additional article image ${index + 1}" />
+      <div class="admin-row__actions">
+        <button class="button button--ghost" type="button" data-move-article-image="${index}" data-direction="-1" ${index === 0 ? 'disabled' : ''}>Up</button>
+        <button class="button button--ghost" type="button" data-move-article-image="${index}" data-direction="1" ${index === state.articleAdditionalImages.length - 1 ? 'disabled' : ''}>Down</button>
+        <button class="button button--danger" type="button" data-remove-article-image="${index}">Remove</button>
+      </div>
+    </article>
+  `).join('') : '<p class="admin-empty">No additional article images selected.</p>';
+}
+
+function addArticleAdditionalFiles(files) {
+  const available = Math.max(0, 5 - state.articleAdditionalImages.length);
+  const selected = [...files].slice(0, available);
+  selected.forEach((file) => {
+    state.articleAdditionalImages.push({ file, preview: URL.createObjectURL(file) });
+  });
+  if (files.length > available) setStatus('Only 5 additional article images can be added.', 'error');
+  renderArticleAdditionalImagePreview();
+}
+
+function removeArticleAdditionalImage(index) {
+  const [removed] = state.articleAdditionalImages.splice(index, 1);
+  if (removed?.preview) URL.revokeObjectURL(removed.preview);
+  renderArticleAdditionalImagePreview();
+}
+
+function moveArticleAdditionalImage(fromIndex, direction) {
+  const toIndex = fromIndex + direction;
+  if (toIndex < 0 || toIndex >= state.articleAdditionalImages.length) return;
+  const [image] = state.articleAdditionalImages.splice(fromIndex, 1);
+  state.articleAdditionalImages.splice(toIndex, 0, image);
+  renderArticleAdditionalImagePreview();
+}
+
+function reorderArticleAdditionalImage(fromIndex, toIndex) {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= state.articleAdditionalImages.length || toIndex >= state.articleAdditionalImages.length) return;
+  const [image] = state.articleAdditionalImages.splice(fromIndex, 1);
+  state.articleAdditionalImages.splice(toIndex, 0, image);
+  renderArticleAdditionalImagePreview();
+}
+
+async function uploadArticleAdditionalImagesPayload() {
+  const urls = [];
+  for (const image of state.articleAdditionalImages.slice(0, 5)) {
+    if (image.file) urls.push(await uploadFile(image.file, 'journal'));
+    else if (image.url) urls.push(image.url);
+  }
+  return urls;
+}
+
 async function uploadArticleImagePayload() {
   const input = document.getElementById('article-image');
   const current = document.getElementById('current-article-image')?.value || '';
@@ -1209,15 +1589,16 @@ async function uploadArticleImagePayload() {
   return current;
 }
 
-function articlePayload(featured_image_url) {
+function articlePayload(featured_image_url, additional_image_urls = []) {
   return {
     title: document.getElementById('article-title').value.trim(),
     category: document.getElementById('article-category').value.trim(),
     article_date: document.getElementById('article-date').value || new Date().toISOString().slice(0, 10),
     featured_image_url,
+    additional_image_urls,
     summary: document.getElementById('article-summary').value.trim(),
     content: document.getElementById('article-content').value.trim(),
-    tags: document.getElementById('article-tags').value.split(',').map((tag) => tag.trim()).filter(Boolean),
+    tags: selectedArticleTags(),
     featured: document.getElementById('article-featured').checked,
     published: document.getElementById('article-published').checked,
   };
@@ -1229,7 +1610,10 @@ function resetArticleForm() {
   form.reset();
   document.getElementById('article-id').value = '';
   if (document.getElementById('current-article-image')) document.getElementById('current-article-image').value = '';
+  setArticleAdditionalImages([]);
   if (document.getElementById('remove-article-image')) document.getElementById('remove-article-image').checked = false;
+  if (document.getElementById('article-additional-images')) document.getElementById('article-additional-images').value = '';
+  fillArticleTagSelect([]);
   setArticleEditorContent('');
   document.getElementById('article-submit-label').textContent = 'Create Article';
 }
@@ -1388,9 +1772,10 @@ async function saveArticle(event) {
       throw new Error('Missing required field. Article title, category, summary and content are required.');
     }
     const featuredImageUrl = await uploadArticleImagePayload();
+    const additionalImageUrls = await uploadArticleAdditionalImagesPayload();
     const request = id
-      ? client.from('journal_articles').update(articlePayload(featuredImageUrl)).eq('id', id)
-      : client.from('journal_articles').insert(articlePayload(featuredImageUrl));
+      ? client.from('journal_articles').update(articlePayload(featuredImageUrl, additionalImageUrls)).eq('id', id)
+      : client.from('journal_articles').insert(articlePayload(featuredImageUrl, additionalImageUrls));
     const { error } = await request;
     if (error) throw error;
     resetArticleForm();
@@ -1435,11 +1820,13 @@ function populateArticleForm(article) {
   document.getElementById('article-date').value = article.article_date || '';
   document.getElementById('article-summary').value = article.summary || '';
   document.getElementById('article-content').value = article.content || '';
-  document.getElementById('article-tags').value = (article.tags || []).join(', ');
+  fillArticleTagSelect(article.tags || []);
   document.getElementById('article-published').checked = Boolean(article.published);
   document.getElementById('article-featured').checked = Boolean(article.featured);
   if (document.getElementById('current-article-image')) document.getElementById('current-article-image').value = article.featured_image_url || '';
+  setArticleAdditionalImages(article.additional_image_urls || []);
   if (document.getElementById('remove-article-image')) document.getElementById('remove-article-image').checked = false;
+  if (document.getElementById('article-additional-images')) document.getElementById('article-additional-images').value = '';
   document.getElementById('article-submit-label').textContent = persisted ? 'Update Article' : 'Create Article';
   showAdminSection('journal');
   setArticleEditorContent(article.content || '');
@@ -1704,6 +2091,29 @@ async function saveNameRecord(event, type) {
   setStatus(`${isTag ? 'Tag' : 'Collection'} saved.`, 'success');
 }
 
+async function addArticleTagFromForm() {
+  const input = document.getElementById('article-new-tag');
+  const name = input?.value.trim();
+  if (!name) return;
+  const selected = new Set(selectedArticleTags());
+  selected.add(name);
+  const existing = state.tags.find((tag) => tag.name.toLowerCase() === name.toLowerCase());
+  if (!existing) {
+    const { error } = await requireClient().from('tags').insert({ name });
+    if (error) {
+      setStatus(error.message, 'error');
+      return;
+    }
+    await loadTags();
+    renderTagManager();
+    fillTagChecklist();
+  }
+  input.value = '';
+  fillAdminOptions();
+  fillArticleTagSelect([...selected]);
+  setStatus('Tag added to article options.', 'success');
+}
+
 async function deleteNameRecord(table, id) {
   if (!window.confirm('Delete this record?')) return;
   const { error } = await requireClient().from(table).delete().eq('id', id);
@@ -1794,6 +2204,17 @@ async function initAdminPage() {
   document.getElementById('article-form')?.addEventListener('submit', saveArticle);
   document.getElementById('settings-form')?.addEventListener('submit', saveSettings);
   document.getElementById('article-reset')?.addEventListener('click', resetArticleForm);
+  document.getElementById('article-add-tag')?.addEventListener('click', addArticleTagFromForm);
+  document.getElementById('article-tags-toggle')?.addEventListener('click', () => {
+    const menu = document.getElementById('article-tags-menu');
+    const toggle = document.getElementById('article-tags-toggle');
+    const open = menu?.classList.toggle('hidden') === false;
+    toggle?.setAttribute('aria-expanded', String(open));
+  });
+  document.getElementById('article-additional-images')?.addEventListener('change', (event) => {
+    addArticleAdditionalFiles(event.target.files || []);
+    event.target.value = '';
+  });
   document.getElementById('tag-form')?.addEventListener('submit', (event) => saveNameRecord(event, 'tag'));
   document.getElementById('collection-form')?.addEventListener('submit', (event) => saveNameRecord(event, 'collection'));
   document.getElementById('cancel-edit')?.addEventListener('click', resetItemForm);
@@ -1819,6 +2240,13 @@ async function initAdminPage() {
       const toggleArticlePublished = event.target.closest('[data-toggle-article-published]');
       const toggleArticleFeatured = event.target.closest('[data-toggle-article-featured]');
       const deleteArticleButton = event.target.closest('[data-delete-article]');
+      const removeArticleImage = event.target.closest('[data-remove-article-image]');
+      const moveArticleImage = event.target.closest('[data-move-article-image]');
+      if (event.target.matches('input[name="article-tags"]')) updateArticleTagSummary();
+      if (!event.target.closest('#article-tags')) {
+        document.getElementById('article-tags-menu')?.classList.add('hidden');
+        document.getElementById('article-tags-toggle')?.setAttribute('aria-expanded', 'false');
+      }
       if (editItem) {
         const item = state.items.find((entry) => entry.id === editItem.dataset.editItem);
         if (!item) throw new Error('Item could not be found.');
@@ -1871,9 +2299,30 @@ async function initAdminPage() {
         setStatus(article.featured ? 'Article unfeatured.' : 'Article featured.', 'success');
       }
       if (deleteArticleButton) await deleteArticle(deleteArticleButton.dataset.deleteArticle);
+      if (removeArticleImage) removeArticleAdditionalImage(Number(removeArticleImage.dataset.removeArticleImage));
+      if (moveArticleImage) moveArticleAdditionalImage(Number(moveArticleImage.dataset.moveArticleImage), Number(moveArticleImage.dataset.direction));
     } catch (error) {
       setStatus(error.message, 'error');
     }
+  });
+
+  document.addEventListener('dragstart', (event) => {
+    const item = event.target.closest('[data-article-image-index]');
+    if (!item) return;
+    event.dataTransfer.setData('text/plain', item.dataset.articleImageIndex);
+    event.dataTransfer.effectAllowed = 'move';
+  });
+
+  document.addEventListener('dragover', (event) => {
+    if (!event.target.closest('[data-article-image-index]')) return;
+    event.preventDefault();
+  });
+
+  document.addEventListener('drop', (event) => {
+    const item = event.target.closest('[data-article-image-index]');
+    if (!item) return;
+    event.preventDefault();
+    reorderArticleAdditionalImage(Number(event.dataTransfer.getData('text/plain')), Number(item.dataset.articleImageIndex));
   });
 
   document.addEventListener('submit', async (event) => {
@@ -2054,6 +2503,7 @@ function prefillContactReference() {
 initHomepageInventory();
 initCataloguePage();
 initHomepageJournal();
+initHomepageSeeking();
 initJournalPage();
 initAdminPage();
 prefillContactReference();

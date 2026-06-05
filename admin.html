@@ -223,6 +223,7 @@
           <form id="article-form" class="admin-form admin-form--wide">
             <input id="article-id" type="hidden" />
             <input id="current-article-image" type="hidden" />
+            <input id="current-article-additional-images" type="hidden" value="[]" />
             <div class="form-row">
               <label>Title <input id="article-title" type="text" required /></label>
               <label>Category <input id="article-category" type="text" required /></label>
@@ -234,6 +235,12 @@
                 <label class="toggle-line toggle-line--compact"><input id="remove-article-image" type="checkbox" /><span>Remove current article image</span></label>
               </div>
             </div>
+            <fieldset class="tag-checklist-wrap article-image-manager">
+              <legend>Additional Article Images</legend>
+              <label for="article-additional-images">Upload up to 5 images</label>
+              <input id="article-additional-images" type="file" accept="image/*" multiple />
+              <div id="article-additional-image-preview" class="article-image-preview-list" aria-live="polite"></div>
+            </fieldset>
             <label>Summary <textarea id="article-summary" rows="3" required></textarea></label>
             <div class="rich-editor-field">
               <label for="article-content">Full Article Content</label>
@@ -255,7 +262,20 @@
               <div id="article-rich-editor" class="rich-editor-surface" aria-label="Rich article editor"></div>
               <textarea id="article-content" class="rich-editor-source" rows="8" required></textarea>
             </div>
-            <label>Tags <input id="article-tags" type="text" placeholder="Rare Books, Provenance, WWI" /></label>
+            <fieldset class="tag-checklist-wrap">
+              <legend>Tags</legend>
+              <label id="article-tags-label">Select Tags</label>
+              <div id="article-tags" class="article-tag-dropdown">
+                <button id="article-tags-toggle" class="article-tag-dropdown__toggle" type="button" aria-expanded="false" aria-labelledby="article-tags-label article-tags-summary">
+                  <span id="article-tags-summary">Select tags</span>
+                </button>
+                <div id="article-tags-menu" class="article-tag-dropdown__menu hidden" role="group" aria-labelledby="article-tags-label"></div>
+              </div>
+              <div class="form-row">
+                <label for="article-new-tag">Add New Tag <input id="article-new-tag" type="text" placeholder="e.g. Polar Exploration" /></label>
+                <button id="article-add-tag" class="button button--secondary" type="button">Add New Tag</button>
+              </div>
+            </fieldset>
             <div class="form-row">
               <label class="toggle-line"><input id="article-published" type="checkbox" checked /><span>Publish Article</span></label>
               <label class="toggle-line"><input id="article-featured" type="checkbox" /><span>Feature Article</span></label>
