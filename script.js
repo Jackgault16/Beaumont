@@ -315,19 +315,26 @@ function slugify(value) {
 }
 
 function absoluteUrl(path = '') {
-  return new URL(path || '/', SITE_URL).href;
+  const canonicalPath = String(path || '/').replace(/^\/Beaumont\//i, '/');
+  return new URL(canonicalPath, SITE_URL).href;
+}
+
+function localPath(path = '') {
+  const cleanPath = String(path || '').replace(/^\/+/, '');
+  const basePath = window.location.pathname.startsWith('/Beaumont/') ? '/Beaumont/' : '/';
+  return `${basePath}${cleanPath}`;
 }
 
 function catalogueItemUrl(item) {
-  return `catalogue/${slugify(item.title || item.reference_number || item.id)}/`;
+  return localPath(`catalogue/${slugify(item.title || item.reference_number || item.id)}/`);
 }
 
 function articleUrl(article) {
-  return `articles/${slugify(article.title || article.id)}/`;
+  return localPath(`articles/${slugify(article.title || article.id)}/`);
 }
 
 function archiveItemUrl(item) {
-  return `pdf-vault/${slugify(item.title || item.id)}/`;
+  return localPath(`pdf-vault/${slugify(item.title || item.id)}/`);
 }
 
 function routeSlug(prefix) {

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Not Found | Beaumont Archives</title>
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var base = path.indexOf('/Beaumont/') === 0 ? '/Beaumont' : '';
+        var file = path.split('/').filter(Boolean).pop() || '';
+        var knownFiles = {
+          'admin-login.html': true,
+          'admin.html': true,
+          'index.html': true,
+          'catalogue.html': true,
+          'collection-services.html': true,
+          'about.html': true,
+          'journal.html': true,
+          'digital-archive.html': true,
+          'material-search.html': true
+        };
+        if (knownFiles[file]) {
+          window.location.replace(base + '/' + file + window.location.search + window.location.hash);
+        }
+      }());
+    </script>
+  </head>
+  <body>
+    <p>Page not found. <a href="/index.html">Return to Beaumont Archives</a>.</p>
+  </body>
+</html>

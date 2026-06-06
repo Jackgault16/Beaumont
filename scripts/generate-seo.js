@@ -180,16 +180,19 @@ function itemSchema(item, canonical, image, description) {
 }
 
 function routePage(templateFile, routeId, title, description, canonical, image, schema) {
+  const prefix = '../../';
   let html = read(templateFile)
-    .replace(/href="styles\.css[^"]*"/g, 'href="/styles.css?v=20260604-editor-fix"')
-    .replace(/src="supabase\.js"/g, 'src="/supabase.js"')
-    .replace(/src="script\.js[^"]*"/g, 'src="/script.js?v=20260604-editor-fix"')
-    .replace(/href="index\.html/g, 'href="/index.html')
-    .replace(/href="catalogue\.html/g, 'href="/catalogue.html')
-    .replace(/href="collection-services\.html/g, 'href="/collection-services.html')
-    .replace(/href="about\.html/g, 'href="/about.html')
-    .replace(/href="journal\.html/g, 'href="/journal.html')
-    .replace(/href="digital-archive\.html/g, 'href="/digital-archive.html');
+    .replace(/href="styles\.css[^"]*"/g, `href="${prefix}styles.css?v=20260604-editor-fix"`)
+    .replace(/src="supabase\.js"/g, `src="${prefix}supabase.js"`)
+    .replace(/src="script\.js[^"]*"/g, `src="${prefix}script.js?v=20260604-editor-fix"`)
+    .replace(/href="index\.html/g, `href="${prefix}index.html`)
+    .replace(/href="catalogue\.html/g, `href="${prefix}catalogue.html`)
+    .replace(/href="collection-services\.html/g, `href="${prefix}collection-services.html`)
+    .replace(/href="about\.html/g, `href="${prefix}about.html`)
+    .replace(/href="journal\.html/g, `href="${prefix}journal.html`)
+    .replace(/href="digital-archive\.html/g, `href="${prefix}digital-archive.html`)
+    .replace(/href="admin-login\.html/g, `href="${prefix}admin-login.html`)
+    .replace(/href="admin\.html/g, `href="${prefix}admin.html`);
 
   const headTags = `
     <meta name="description" content="${escapeHtml(description)}" />
