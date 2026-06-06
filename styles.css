@@ -1311,6 +1311,28 @@ button {
   gap: 1rem;
 }
 
+.admin-fieldset {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid rgba(184, 155, 94, 0.24);
+  background: rgba(248, 239, 220, 0.42);
+}
+
+.admin-fieldset h3 {
+  margin: 0;
+  color: #9b7732 !important;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.admin-fieldset .form-row > div {
+  display: grid;
+  gap: 1rem;
+}
+
 .toggle-line {
   grid-template-columns: auto 1fr;
   align-content: center;
@@ -7028,6 +7050,51 @@ body .page-shell > main {
   border-bottom: 1px solid rgba(196, 161, 90, 0.36);
 }
 
+.item-detail__bibliographic {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(196, 161, 90, 0.36);
+  border-bottom: 1px solid rgba(196, 161, 90, 0.36);
+  background: rgba(248, 239, 220, 0.36);
+}
+
+.item-detail__bibliographic h3 {
+  margin: 0;
+  color: #9b7732 !important;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.item-detail__bibliographic dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1.25rem;
+  margin: 0;
+}
+
+.item-detail__bibliographic div {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.item-detail__bibliographic dt {
+  color: #9b7732 !important;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.item-detail__bibliographic dd {
+  margin: 0;
+  color: rgba(8, 43, 34, 0.86) !important;
+  line-height: 1.55;
+}
+
 .item-detail__meta,
 .item-detail__price {
   margin: 0 !important;
@@ -8179,6 +8246,10 @@ button,
 }
 
 @media (max-width: 700px) {
+  .item-detail__bibliographic dl {
+    grid-template-columns: 1fr;
+  }
+
   .catalogue-page > .catalogue-header {
     width: min(100% - 1rem, 1320px) !important;
     padding: 2rem 1.25rem !important;
@@ -8280,6 +8351,18 @@ button,
 
 .catalogue-item__title {
   font-size: clamp(1.35rem, 1.75vw, 1.9rem) !important;
+}
+
+.catalogue-item__bibliographic {
+  display: grid;
+  gap: 0.15rem;
+  color: rgba(8, 43, 34, 0.68) !important;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.catalogue-item__bibliographic span {
+  color: inherit !important;
 }
 
 .catalogue-item__meta {

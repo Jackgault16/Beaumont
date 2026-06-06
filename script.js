@@ -287,6 +287,7 @@ const state = {
   articleEditorReady: null,
   articleAdditionalImages: [],
   editingArchiveId: null,
+  itemBibliographicFieldsUnsupported: false,
 };
 
 function hasSupabaseConfig() {
@@ -478,6 +479,11 @@ function availabilityLabel(item) {
 function itemSearchText(item) {
   return [
     item.title,
+    item.author,
+    item.edition,
+    item.publisher,
+    item.publication_year,
+    item.publication_place,
     item.reference_number,
     item.category,
     item.subcategory,
@@ -590,10 +596,19 @@ function breadcrumbSchema(items) {
 }
 
 function itemSeoDescription(item) {
-  const base = plainTextExcerpt(catalogueDescription(item), 150);
+  const author = itemAuthor(item);
+  const publisher = itemPublisher(item);
+  const publicationDate = itemPublicationDate(item);
+  const publicationPlace = itemPublicationPlace(item);
+  const edition = itemEdition(item);
+  const bibliographic = [
+    edition ? `${edition} of ${author ? `${author}'s ` : ''}${item.title}.` : '',
+    publisher ? `Published by ${publisher}${publicationPlace ? `, ${publicationPlace}` : ''}${publicationDate ? `, ${publicationDate}` : ''}.` : '',
+  ].filter(Boolean).join(' ');
+  const base = bibliographic || plainTextExcerpt(catalogueDescription(item), 150);
   const parts = [
     base,
-    item.year ? `Published ${item.year}.` : '',
+    !bibliographic && publicationDate ? `Published ${publicationDate}.` : '',
     item.reference_number ? `Reference ${item.reference_number}.` : '',
     'Available from Beaumont Archives.',
   ].filter(Boolean);
@@ -627,12 +642,33 @@ function itemPublisher(item) {
 }
 
 function itemPublicationDate(item) {
-  return firstItemValue(item, ['publication_date', 'published_date', 'date_published', 'year']);
+  return firstItemValue(item, ['publication_year', 'publication_date', 'published_date', 'date_published', 'year']);
 }
 
 function itemEdition(item) {
   return firstItemValue(item, ['edition', 'edition_statement'])
     || labelledItemValue(item, ['edition', 'edition statement']);
+}
+
+function itemPublicationPlace(item) {
+  return firstItemValue(item, ['publication_place', 'place_of_publication'])
+    || labelledItemValue(item, ['publication place', 'place of publication', 'published at']);
+}
+
+function bibliographicFields(item) {
+  return [
+    { label: 'Author', value: itemAuthor(item) },
+    { label: 'Edition', value: itemEdition(item) },
+    { label: 'Publisher', value: itemPublisher(item) },
+    { label: 'Publication Year', value: itemPublicationDate(item) },
+    { label: 'Publication Place', value: itemPublicationPlace(item) },
+  ].filter((field) => field.value);
+}
+
+function catalogueCardBibliographicLine(item) {
+  const author = itemAuthor(item);
+  const details = [itemPublisher(item), itemPublicationPlace(item), itemPublicationDate(item)].filter(Boolean).join(' • ');
+  return [author, details].filter(Boolean);
 }
 
 function itemConditionSchema(item) {
@@ -650,6 +686,7 @@ function itemSchema(item) {
   const author = itemAuthor(item);
   const publisher = itemPublisher(item);
   const publicationDate = itemPublicationDate(item);
+  const publicationPlace = itemPublicationPlace(item);
   const edition = itemEdition(item);
   const condition = cleanText(item.condition);
   return {
@@ -667,12 +704,14 @@ function itemSchema(item) {
     bookEdition: edition || undefined,
     author: author ? { '@type': 'Person', name: author } : undefined,
     publisher: publisher ? { '@type': 'Organization', name: publisher } : undefined,
+    locationCreated: publicationPlace ? { '@type': 'Place', name: publicationPlace } : undefined,
     itemCondition: itemConditionSchema(item),
     additionalProperty: [
       item.reference_number ? { '@type': 'PropertyValue', name: 'Reference number', value: item.reference_number } : null,
       author ? { '@type': 'PropertyValue', name: 'Author', value: author } : null,
       publisher ? { '@type': 'PropertyValue', name: 'Publisher', value: publisher } : null,
       publicationDate ? { '@type': 'PropertyValue', name: 'Publication date', value: publicationDate } : null,
+      publicationPlace ? { '@type': 'PropertyValue', name: 'Publication place', value: publicationPlace } : null,
       edition ? { '@type': 'PropertyValue', name: 'Edition', value: edition } : null,
       item.collection_name ? { '@type': 'PropertyValue', name: 'Collection', value: item.collection_name } : null,
       item.provenance ? { '@type': 'PropertyValue', name: 'Provenance', value: item.provenance } : null,
@@ -993,6 +1032,7 @@ async function initHomepageInventory() {
 function renderCatalogueCard(item) {
   const image = realItemImage(item);
   const description = plainTextExcerpt(catalogueDescription(item), 180);
+  const bibliographicLines = catalogueCardBibliographicLine(item);
   return `
     <article class="catalogue-item">
       <a class="catalogue-item__image${image ? '' : ' catalogue-item__image--empty'}" href="${catalogueItemUrl(item)}">
@@ -1001,6 +1041,7 @@ function renderCatalogueCard(item) {
       </a>
       <div class="catalogue-item__content">
         <div class="catalogue-item__title">${escapeHtml(item.title)}</div>
+        ${bibliographicLines.length ? `<div class="catalogue-item__bibliographic">${bibliographicLines.map((line) => `<span>${escapeHtml(line)}</span>`).join('')}</div>` : ''}
         <div class="catalogue-item__meta">${escapeHtml(item.reference_number)} · ${escapeHtml(item.category)}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</div>
         <div class="catalogue-item__price">${formatPrice(item.price)}</div>
         ${description ? `<p class="catalogue-item__desc">${escapeHtml(description)}</p>` : ''}
@@ -1069,6 +1110,8 @@ function renderItemDetail(item) {
   const beaumontNotes = cleanText(item.beaumont_notes);
   const references = cleanText(item.item_references);
   const pageUrl = catalogueItemUrl(item);
+  const bibliographic = bibliographicFields(item);
+  const seoTitle = [item.title, itemAuthor(item), SITE_NAME].filter(Boolean).join(' | ');
   const relatedItems = state.items
     .filter((entry) => entry.id !== item.id && !entry.archive_reference && (entry.category === item.category || itemTags(entry).some((tag) => itemTags(item).includes(tag))))
     .slice(0, 3);
@@ -1080,7 +1123,7 @@ function renderItemDetail(item) {
     })
     .slice(0, 3);
   applySeo({
-    title: item.title,
+    title: seoTitle,
     description: itemSeoDescription(item),
     url: pageUrl,
     image: realItemImage(item) || DEFAULT_SHARE_IMAGE,
@@ -1105,7 +1148,7 @@ function renderItemDetail(item) {
   listing.classList.add('hidden');
   detail.classList.remove('hidden');
   detail.innerHTML = `
-    <a class="catalogue-back" href="/catalogue.html">Back to Catalogue</a>
+    <a class="catalogue-back" href="${localPath('catalogue.html')}">Back to Catalogue</a>
     <article class="item-detail">
       <div class="item-detail__media">
         <div class="item-detail__viewer">
@@ -1137,6 +1180,19 @@ function renderItemDetail(item) {
           <p class="item-detail__price">${formatPrice(item.price)}</p>
           <span class="item-detail__availability">${escapeHtml(availabilityLabel(item))}</span>
         </div>
+        ${bibliographic.length ? `
+          <section class="item-detail__bibliographic" aria-label="Bibliographic record">
+            <h3>BIBLIOGRAPHIC RECORD</h3>
+            <dl>
+              ${bibliographic.map((field) => `
+                <div>
+                  <dt>${escapeHtml(field.label)}</dt>
+                  <dd>${escapeHtml(field.value)}</dd>
+                </div>
+              `).join('')}
+            </dl>
+          </section>
+        ` : ''}
         <div class="item-detail__sections">
           ${sections.map((section) => `
             <section class="item-detail__section">
@@ -1365,8 +1421,13 @@ async function uploadImagePayload() {
 }
 
 function itemPayload(main_image_url) {
-  return {
+  const payload = {
     title: document.getElementById('title').value.trim(),
+    author: document.getElementById('author')?.value.trim() || '',
+    edition: document.getElementById('edition')?.value.trim() || '',
+    publisher: document.getElementById('publisher')?.value.trim() || '',
+    publication_year: document.getElementById('publication-year')?.value.trim() || '',
+    publication_place: document.getElementById('publication-place')?.value.trim() || '',
     category: document.getElementById('category').value,
     subcategory: document.getElementById('subcategory').value.trim(),
     year: document.getElementById('year').value.trim(),
@@ -1384,6 +1445,31 @@ function itemPayload(main_image_url) {
     archive_reference: document.getElementById('archive-reference')?.checked || false,
     main_image_url,
   };
+  if (state.itemBibliographicFieldsUnsupported) {
+    ['author', 'edition', 'publisher', 'publication_year', 'publication_place'].forEach((field) => delete payload[field]);
+  }
+  return payload;
+}
+
+function isMissingBibliographicColumnError(error) {
+  const message = String(error?.message || error?.details || '');
+  return /author|edition|publisher|publication_year|publication_place/i.test(message)
+    && /column|schema cache|could not find/i.test(message);
+}
+
+async function saveItemRow(client, itemId, main_image_url) {
+  const payload = itemPayload(main_image_url);
+  const request = itemId
+    ? client.from('items').update(payload).eq('id', itemId).select('id').maybeSingle()
+    : client.from('items').insert(payload).select('id').single();
+  const { data, error } = await request;
+  if (error && isMissingBibliographicColumnError(error) && !state.itemBibliographicFieldsUnsupported) {
+    state.itemBibliographicFieldsUnsupported = true;
+    setStatus('Bibliographic fields are waiting for the database migration. Saving existing fields only.', 'error');
+    return saveItemRow(client, itemId, main_image_url);
+  }
+  if (error) throw error;
+  return data;
 }
 
 async function saveItem(event) {
@@ -1397,8 +1483,7 @@ async function saveItem(event) {
     const { main_image_url, galleryUrls } = await uploadImagePayload();
     let itemId = state.editingItemId;
     if (itemId) {
-      const { data, error } = await client.from('items').update(itemPayload(main_image_url)).eq('id', itemId).select('id').maybeSingle();
-      if (error) throw error;
+      const data = await saveItemRow(client, itemId, main_image_url);
       if (!data) throw new Error('Object could not be updated because it no longer exists in the database.');
       let relationError;
       ({ error: relationError } = await client.from('item_images').delete().eq('item_id', itemId));
@@ -1406,8 +1491,7 @@ async function saveItem(event) {
       ({ error: relationError } = await client.from('item_tags').delete().eq('item_id', itemId));
       if (relationError) throw relationError;
     } else {
-      const { data, error } = await client.from('items').insert(itemPayload(main_image_url)).select('id').single();
-      if (error) throw error;
+      const data = await saveItemRow(client, null, main_image_url);
       itemId = data.id;
     }
     if (galleryUrls.length) {
@@ -1486,6 +1570,11 @@ function populateItemForm(item) {
   showAdminSection('items');
   state.editingItemId = item.id;
   document.getElementById('title').value = item.title || '';
+  document.getElementById('author').value = item.author || '';
+  document.getElementById('edition').value = item.edition || '';
+  document.getElementById('publisher').value = item.publisher || '';
+  document.getElementById('publication-year').value = item.publication_year || '';
+  document.getElementById('publication-place').value = item.publication_place || '';
   document.getElementById('category').value = item.category || '';
   document.getElementById('subcategory').value = item.subcategory || '';
   document.getElementById('year').value = item.year || '';

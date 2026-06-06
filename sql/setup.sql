@@ -53,6 +53,11 @@ create table if not exists public.items (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   title text not null,
+  author text,
+  edition text,
+  publisher text,
+  publication_year text,
+  publication_place text,
   category text not null check (category in ('Books', 'Maps', 'Documents', 'Historical Objects')),
   subcategory text,
   year text,
@@ -176,6 +181,11 @@ alter table public.enquiries add column if not exists internal_notes text;
 alter table public.enquiries add column if not exists description text;
 alter table public.enquiries add column if not exists image_urls text[] not null default '{}';
 alter table public.items add column if not exists catalogue_description text;
+alter table public.items add column if not exists author text;
+alter table public.items add column if not exists edition text;
+alter table public.items add column if not exists publisher text;
+alter table public.items add column if not exists publication_year text;
+alter table public.items add column if not exists publication_place text;
 alter table public.items alter column short_description drop not null;
 alter table public.items add column if not exists archive_reference boolean not null default false;
 alter table public.items add column if not exists physical_details text;
@@ -249,7 +259,7 @@ create index if not exists idx_items_featured_unsold on public.items (featured, 
 create index if not exists idx_items_sold on public.items (sold);
 create index if not exists idx_items_reference_number on public.items (reference_number);
 drop index if exists public.idx_items_title_search;
-create index if not exists idx_items_title_search on public.items using gin (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(catalogue_description, '') || ' ' || coalesce(physical_details, '') || ' ' || coalesce(beaumont_notes, '') || ' ' || coalesce(item_references, '') || ' ' || coalesce(reference_number, '')));
+create index if not exists idx_items_title_search on public.items using gin (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(author, '') || ' ' || coalesce(edition, '') || ' ' || coalesce(publisher, '') || ' ' || coalesce(publication_year, '') || ' ' || coalesce(publication_place, '') || ' ' || coalesce(catalogue_description, '') || ' ' || coalesce(physical_details, '') || ' ' || coalesce(beaumont_notes, '') || ' ' || coalesce(item_references, '') || ' ' || coalesce(reference_number, '')));
 create index if not exists idx_item_images_item_id on public.item_images (item_id);
 create index if not exists idx_item_images_order on public.item_images (item_id, display_order, created_at);
 create index if not exists idx_tags_name on public.tags (name);

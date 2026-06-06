@@ -77,10 +77,19 @@ async function fetchTable(table, query = '') {
 }
 
 function itemDescription(item) {
+  const author = itemAuthor(item);
+  const publisher = itemPublisher(item);
+  const publicationDate = itemPublicationDate(item);
+  const publicationPlace = itemPublicationPlace(item);
+  const edition = itemEdition(item);
+  const bibliographic = [
+    edition ? `${edition} of ${author ? `${author}'s ` : ''}${item.title}.` : '',
+    publisher ? `Published by ${publisher}${publicationPlace ? `, ${publicationPlace}` : ''}${publicationDate ? `, ${publicationDate}` : ''}.` : '',
+  ].filter(Boolean).join(' ');
   const description = item.catalogue_description || item.short_description || item.full_description || '';
   return excerpt([
-    description,
-    item.year ? `Published ${item.year}.` : '',
+    bibliographic || description,
+    !bibliographic && itemPublicationDate(item) ? `Published ${itemPublicationDate(item)}.` : '',
     item.reference_number ? `Reference ${item.reference_number}.` : '',
     'Available from Beaumont Archives.',
   ].filter(Boolean).join(' '));
@@ -117,12 +126,17 @@ function itemPublisher(item) {
 }
 
 function itemPublicationDate(item) {
-  return firstItemValue(item, ['publication_date', 'published_date', 'date_published', 'year']);
+  return firstItemValue(item, ['publication_year', 'publication_date', 'published_date', 'date_published', 'year']);
 }
 
 function itemEdition(item) {
   return firstItemValue(item, ['edition', 'edition_statement'])
     || labelledItemValue(item, ['edition', 'edition statement']);
+}
+
+function itemPublicationPlace(item) {
+  return firstItemValue(item, ['publication_place', 'place_of_publication'])
+    || labelledItemValue(item, ['publication place', 'place of publication', 'published at']);
 }
 
 function itemConditionSchema(item) {
@@ -138,6 +152,7 @@ function itemSchema(item, canonical, image, description) {
   const author = itemAuthor(item);
   const publisher = itemPublisher(item);
   const publicationDate = itemPublicationDate(item);
+  const publicationPlace = itemPublicationPlace(item);
   const edition = itemEdition(item);
   const condition = cleanText(item.condition);
   return {
@@ -155,12 +170,14 @@ function itemSchema(item, canonical, image, description) {
     bookEdition: edition || undefined,
     author: author ? { '@type': 'Person', name: author } : undefined,
     publisher: publisher ? { '@type': 'Organization', name: publisher } : undefined,
+    locationCreated: publicationPlace ? { '@type': 'Place', name: publicationPlace } : undefined,
     itemCondition: itemConditionSchema(item),
     additionalProperty: [
       item.reference_number ? { '@type': 'PropertyValue', name: 'Reference number', value: item.reference_number } : null,
       author ? { '@type': 'PropertyValue', name: 'Author', value: author } : null,
       publisher ? { '@type': 'PropertyValue', name: 'Publisher', value: publisher } : null,
       publicationDate ? { '@type': 'PropertyValue', name: 'Publication date', value: publicationDate } : null,
+      publicationPlace ? { '@type': 'PropertyValue', name: 'Publication place', value: publicationPlace } : null,
       edition ? { '@type': 'PropertyValue', name: 'Edition', value: edition } : null,
       item.collection_name ? { '@type': 'PropertyValue', name: 'Collection', value: item.collection_name } : null,
       item.provenance ? { '@type': 'PropertyValue', name: 'Provenance', value: item.provenance } : null,
@@ -253,7 +270,8 @@ async function main() {
     const image = item.main_image_url || item.item_images?.[0]?.image_url || defaultImage;
     const description = itemDescription(item);
     const schema = [itemSchema(item, canonical, image, description)];
-    write(path.join(route.slice(1), 'index.html'), routePage('catalogue.html', item.id, `${item.title} | ${siteName}`, description, canonical, image, schema));
+    const pageTitle = [item.title, itemAuthor(item), siteName].filter(Boolean).join(' | ');
+    write(path.join(route.slice(1), 'index.html'), routePage('catalogue.html', item.id, pageTitle, description, canonical, image, schema));
     routes.push({ url: canonical, lastmod: modified(item), changefreq: 'weekly', priority: '0.8' });
   });
 
