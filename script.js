@@ -1013,7 +1013,7 @@ function renderFeaturedCarousel(items) {
 }
 
 function enquiryUrl(item) {
-  return `index.html?ref=${encodeURIComponent(item.reference_number || item.title || '')}#contact`;
+  return localPath(`index.html?ref=${encodeURIComponent(item.reference_number || item.title || '')}#contact`);
 }
 
 async function initHomepageInventory() {
