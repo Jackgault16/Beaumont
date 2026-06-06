@@ -5781,6 +5781,11 @@ select,
   max-width: 1120px;
 }
 
+.material-sourcing-section {
+  width: 100%;
+  max-width: none;
+}
+
 .editorial-service-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
