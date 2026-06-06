@@ -3389,10 +3389,23 @@ function anchorScrollTarget(hash) {
   return document.querySelector(hash);
 }
 
+function scrollToContactForm(behavior = 'smooth') {
+  const target = document.getElementById('contact-form') || document.getElementById('contact');
+  if (!target) return false;
+  const rect = target.getBoundingClientRect();
+  const headerHeight = document.querySelector('.site-header')?.getBoundingClientRect().height || 0;
+  const visibleFormHeight = Math.min(rect.height, window.innerHeight * 0.72);
+  const preferredOffset = Math.max(headerHeight + 24, (window.innerHeight - visibleFormHeight) / 2);
+  const top = window.scrollY + rect.top - preferredOffset;
+  window.scrollTo({ top: Math.max(0, top), behavior });
+  return true;
+}
+
 function scrollToAnchorTarget(hash, behavior = 'smooth') {
+  if (hash === '#contact') return scrollToContactForm(behavior);
   const target = anchorScrollTarget(hash);
   if (!target) return false;
-  target.scrollIntoView({ behavior, block: hash === '#contact' ? 'center' : 'start' });
+  target.scrollIntoView({ behavior, block: 'start' });
   return true;
 }
 
@@ -3462,9 +3475,11 @@ function prefillContactReference() {
 
 function alignInitialContactHash() {
   if (window.location.hash !== '#contact') return;
-  window.requestAnimationFrame(() => {
-    scrollToAnchorTarget('#contact', 'auto');
-  });
+  const align = () => scrollToAnchorTarget('#contact', 'auto');
+  window.requestAnimationFrame(align);
+  window.setTimeout(align, 120);
+  window.setTimeout(align, 450);
+  window.addEventListener('load', align, { once: true });
 }
 
 initHomepageInventory();
