@@ -451,6 +451,141 @@ function catalogueDescription(item) {
   return [cleanText(item.short_description), cleanText(item.full_description)].filter(Boolean).join('\n\n');
 }
 
+const BIBLIOGRAPHIC_BACKFILL_BY_REFERENCE = {
+  'BM-2026-023': {
+    author: 'General Sir Frank Kitson',
+    edition: 'First Edition, signed limited edition of 150 copies',
+    publisher: 'Privately published',
+    publication_year: '2011',
+  },
+  'BM-2026-022': {
+    author: 'Julian Amery',
+    edition: 'First Edition',
+    publisher: 'Macmillan & Co. Ltd.',
+    publication_year: '1948',
+    publication_place: 'London',
+  },
+  'BM-2026-021': {
+    author: 'Major-General Sir W. F. P. Napier, K.C.B.',
+    edition: 'Chandos Classics Edition',
+    publisher: 'Frederick Warne & Co.',
+    publication_year: 'Late 19th Century',
+    publication_place: 'London & New York',
+  },
+  'BM-2026-020': {
+    author: 'Sir Winston Churchill',
+    edition: 'Complete Six-Volume Set',
+    publisher: 'Cassell & Co.',
+    publication_year: '1948-1954',
+    publication_place: 'London',
+  },
+  'BM-2026-019': {
+    edition: 'The Cities Series',
+    publisher: 'T. N. Foulis',
+    publication_year: 'c.1905-1910',
+    publication_place: 'London & Edinburgh',
+  },
+  'BM-2026-018': {
+    author: 'Winston S. Churchill',
+    edition: 'First Edition',
+    publisher: 'Cassell and Company Ltd.',
+    publication_year: '1946',
+    publication_place: 'London, Toronto, Melbourne and Sydney',
+  },
+  'BM-2026-017': {
+    author: 'Field-Marshal The Viscount Montgomery of Alamein, K.G.',
+    edition: 'Third Impression',
+    publisher: 'Collins',
+    publication_year: 'December 1958',
+    publication_place: 'London',
+  },
+  'BM-2026-016': {
+    author: 'Lieutenant-General Sir William F. Butler',
+    edition: '1920 Reprint Edition',
+    publisher: 'Macmillan & Co., Limited',
+    publication_year: '1920',
+    publication_place: 'St Martin\'s Street, London',
+  },
+  'BM-2026-015': {
+    author: 'Major L. F. Ellis',
+    edition: 'First Edition',
+    publisher: 'Her Majesty\'s Stationery Office',
+    publication_year: '1962',
+    publication_place: 'London',
+  },
+  'BM-2026-014': {
+    author: 'Robert Graves',
+    edition: 'Early Edition',
+    publisher: 'Jonathan Cape',
+    publication_year: '1927',
+    publication_place: 'London',
+  },
+  'BM-2026-013': {
+    author: 'Richard Aldington',
+    edition: 'First Edition',
+    publisher: 'Collins',
+    publication_year: '1955',
+    publication_place: 'London',
+  },
+  'BM-2026-012': {
+    author: 'Sir Winston Churchill',
+    edition: 'First Editions, Volumes I-IV',
+    publisher: 'Cassell & Co. Ltd.',
+    publication_year: '1948-1951',
+    publication_place: 'London',
+  },
+  'BM-2026-011': {
+    author: 'Cyril Falls',
+    edition: 'First Edition',
+    publisher: 'M\'Caw, Stevenson & Orr Ltd.',
+    publication_year: '1922',
+    publication_place: 'Belfast and London',
+  },
+};
+
+function firstPatternValue(source, patterns) {
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (match?.[1]) return cleanText(match[1].replace(/\.$/, ''));
+  }
+  return '';
+}
+
+function inferredBibliographicFields(item) {
+  const source = [item.physical_details, catalogueDescription(item), item.full_description, item.short_description]
+    .filter(Boolean)
+    .join('\n');
+  const labelled = {
+    author: firstPatternValue(source, [/^\s*(?:Author|Creator|Artist)\s*:\s*(.+)$/im, /\bby\s+([^.,\n]+),\s+published by\b/i]),
+    edition: firstPatternValue(source, [/^\s*(?:Edition|Edition statement)\s*:\s*(.+)$/im, /^\s*((?:First|Second|Third|Fourth|Fifth).{0,50}(?:Edition|Impression)|[0-9]{4}\s+Reprint Edition)\.?$/im]),
+    publisher: firstPatternValue(source, [/^\s*(?:Publisher|Published by|Imprint)\s*:\s*(.+)$/im, /\bpublished by\s+([^.,\n]+(?:\s*&\s*Co\.?(?:,\s*Limited| Ltd\.)?)?)/i]),
+    publication_year: firstPatternValue(source, [/^\s*(?:Publication Year|Publication Date|Published|Date)\s*:\s*(.+)$/im, /\b(?:published|first published|privately published)[^0-9]{0,40}((?:c\.)?\s*[12][0-9]{3}(?:\s*[–-]\s*[12][0-9]{3})?)/i]) || cleanText(item.year),
+    publication_place: firstPatternValue(source, [/^\s*(?:Publication Place|Place of Publication)\s*:\s*(.+)$/im]),
+  };
+  return { ...labelled, ...(BIBLIOGRAPHIC_BACKFILL_BY_REFERENCE[item.reference_number] || {}) };
+}
+
+async function backfillCatalogueBibliographicFields() {
+  if (!state.items.length) return 0;
+  const client = requireClient();
+  const updates = state.items
+    .map((item) => {
+      const inferred = inferredBibliographicFields(item);
+      const payload = {};
+      ['author', 'edition', 'publisher', 'publication_year', 'publication_place'].forEach((field) => {
+        if (!cleanText(item[field]) && cleanText(inferred[field])) payload[field] = cleanText(inferred[field]);
+      });
+      return Object.keys(payload).length ? { id: item.id, payload } : null;
+    })
+    .filter(Boolean);
+  if (!updates.length) return 0;
+  await Promise.all(updates.map(async ({ id, payload }) => {
+    const { error } = await client.from('items').update(payload).eq('id', id);
+    if (error) throw error;
+  }));
+  return updates.length;
+}
+
 function plainTextExcerpt(value, maxLength = 160) {
   const text = String(value || '')
     .replace(/!\[[^\]]*]\([^)]+\)/g, '')
@@ -3040,6 +3175,15 @@ async function openAdminDashboard() {
     await seedSampleInventory();
     await Promise.all([loadTags(), loadCollections(), loadItems()]);
     setStatus('Starter inventory is ready to edit.', 'success');
+  }
+  try {
+    const backfilledItems = await backfillCatalogueBibliographicFields();
+    if (backfilledItems) {
+      await loadItems();
+      setStatus(`Bibliographic details autofilled for ${backfilledItems} catalogue item${backfilledItems === 1 ? '' : 's'}.`, 'success');
+    }
+  } catch (error) {
+    setStatus(`Bibliographic autofill could not complete: ${error.message}`, 'error');
   }
   fillAdminOptions();
   fillTagChecklist();
