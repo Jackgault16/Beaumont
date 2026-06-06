@@ -3384,16 +3384,27 @@ function updateHeaderScrollState() {
 updateHeaderScrollState();
 window.addEventListener('scroll', updateHeaderScrollState, { passive: true });
 
+function anchorScrollTarget(hash) {
+  if (hash === '#contact') return document.getElementById('contact-form') || document.getElementById('contact');
+  return document.querySelector(hash);
+}
+
+function scrollToAnchorTarget(hash, behavior = 'smooth') {
+  const target = anchorScrollTarget(hash);
+  if (!target) return false;
+  target.scrollIntoView({ behavior, block: hash === '#contact' ? 'center' : 'start' });
+  return true;
+}
+
 document.querySelectorAll('a[href*="#"]').forEach((anchor) => {
   anchor.addEventListener('click', (event) => {
     const href = anchor.getAttribute('href');
     if (!href) return;
     const url = new URL(href, window.location.href);
     if (url.origin !== window.location.origin || url.pathname !== window.location.pathname || url.search !== window.location.search || !url.hash) return;
-    const target = document.querySelector(url.hash);
-    if (!target) return;
+    if (!anchorScrollTarget(url.hash)) return;
     event.preventDefault();
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollToAnchorTarget(url.hash, 'smooth');
     window.history.pushState(null, '', url.hash);
     if (primaryNav?.classList.contains('active')) {
       primaryNav.classList.remove('active');
@@ -3449,6 +3460,13 @@ function prefillContactReference() {
   if (reference && input && !input.value) input.value = reference;
 }
 
+function alignInitialContactHash() {
+  if (window.location.hash !== '#contact') return;
+  window.requestAnimationFrame(() => {
+    scrollToAnchorTarget('#contact', 'auto');
+  });
+}
+
 initHomepageInventory();
 initCataloguePage();
 initDigitalArchivePage();
@@ -3458,5 +3476,6 @@ initJournalPage();
 initAdminPage();
 initBaseSeo();
 prefillContactReference();
+alignInitialContactHash();
 
 
