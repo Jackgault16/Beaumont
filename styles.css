@@ -3547,8 +3547,7 @@ select,
   gap: 0.65rem;
 }
 
-.header-search,
-.header-instagram {
+.header-search {
   display: inline-grid;
   place-items: center;
   width: 2.15rem;
@@ -3559,18 +3558,8 @@ select,
   opacity: 0.9;
 }
 
-.header-instagram svg {
-  width: 1.08rem;
-  height: 1.08rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-}
-
 .header-search:hover,
-.header-search:focus-visible,
-.header-instagram:hover,
-.header-instagram:focus-visible {
+.header-search:focus-visible {
   color: var(--antique-gold);
   background: transparent;
 }
@@ -9015,58 +9004,6 @@ body .page-shell > main .journal-entry__summary {
   margin-top: 0.9rem;
 }
 
-.instagram-section {
-  padding-top: clamp(1.45rem, 3vw, 2.25rem) !important;
-  padding-bottom: clamp(1.45rem, 3vw, 2.25rem) !important;
-}
-
-.instagram-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(0.65rem, 1.2vw, 1rem);
-  margin-top: clamp(0.85rem, 1.8vw, 1.25rem);
-}
-
-.instagram-tile,
-.instagram-fallback {
-  position: relative;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  aspect-ratio: 1 / 1;
-  border: 1px solid rgba(196, 161, 90, 0.28);
-  background: rgba(248, 239, 220, 0.58);
-}
-
-.instagram-tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 260ms ease, opacity 260ms ease;
-}
-
-.instagram-tile:hover img,
-.instagram-tile:focus-visible img {
-  transform: scale(1.035);
-  opacity: 0.92;
-}
-
-.instagram-fallback {
-  grid-column: 1 / -1;
-  aspect-ratio: auto;
-  min-height: 7rem;
-  color: #082b22 !important;
-  font-size: 0.78rem;
-  letter-spacing: 0.16em;
-  text-align: center;
-  text-transform: uppercase;
-}
-
-.footer-social-link {
-  display: inline-block;
-  margin-top: 0.35rem;
-}
-
 .services-editorial .service-card {
   min-height: 0 !important;
 }
@@ -9080,12 +9017,6 @@ body .page-shell > main .journal-entry__summary {
   .homepage-trust-list,
   .specialist-area-grid {
     grid-template-columns: 1fr !important;
-  }
-}
-
-@media (max-width: 760px) {
-  .instagram-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

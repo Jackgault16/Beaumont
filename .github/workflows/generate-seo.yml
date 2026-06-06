@@ -25,14 +25,10 @@ jobs:
           node-version: '20'
 
       - name: Generate sitemap and clean routes
-        run: |
-          node scripts/generate-instagram-feed.js
-          node scripts/generate-seo.js
-        env:
-          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+        run: node scripts/generate-seo.js
 
       - name: Commit generated SEO files
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Generate SEO sitemap and clean routes
-          file_pattern: sitemap.xml robots.txt seo-routes.json instagram-feed.json catalogue articles pdf-vault
+          file_pattern: sitemap.xml robots.txt seo-routes.json catalogue articles pdf-vault
