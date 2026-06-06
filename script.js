@@ -3449,6 +3449,40 @@ function prefillContactReference() {
   if (reference && input && !input.value) input.value = reference;
 }
 
+function renderInstagramPosts(posts = []) {
+  const grid = document.getElementById('instagram-grid');
+  if (!grid) return;
+  const visiblePosts = posts
+    .filter((post) => post && post.image_url && post.permalink)
+    .slice(0, 6);
+  if (!visiblePosts.length) {
+    grid.innerHTML = `
+      <a class="instagram-fallback" href="https://www.instagram.com/beaumontarchives/" target="_blank" rel="noopener">
+        <span>Follow Beaumont Archives on Instagram</span>
+      </a>
+    `;
+    return;
+  }
+  grid.innerHTML = visiblePosts.map((post) => `
+    <a class="instagram-tile" href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" aria-label="Open Beaumont Archives Instagram post">
+      <img src="${escapeHtml(post.image_url)}" alt="${escapeHtml(post.caption || 'Beaumont Archives Instagram post')}" loading="lazy" />
+    </a>
+  `).join('');
+}
+
+async function initInstagramFeed() {
+  const grid = document.getElementById('instagram-grid');
+  if (!grid) return;
+  try {
+    const response = await fetch('instagram-feed.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Instagram feed unavailable');
+    const data = await response.json();
+    renderInstagramPosts(data.posts || []);
+  } catch (error) {
+    renderInstagramPosts([]);
+  }
+}
+
 initHomepageInventory();
 initCataloguePage();
 initDigitalArchivePage();
@@ -3457,6 +3491,7 @@ initHomepageJournal();
 initJournalPage();
 initAdminPage();
 initBaseSeo();
+initInstagramFeed();
 prefillContactReference();
 
 
