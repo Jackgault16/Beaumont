@@ -1,51 +1,51 @@
 {
-  "generated_at": "2026-06-06T23:18:17.288Z",
+  "generated_at": "2026-06-07T04:55:27.080Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "weekly",
       "priority": "1.0"
     },
     {
       "url": "https://beaumontarchives.co.uk/catalogue.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "daily",
       "priority": "0.9"
     },
     {
       "url": "https://beaumontarchives.co.uk/journal.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "weekly",
       "priority": "0.8"
     },
     {
       "url": "https://beaumontarchives.co.uk/digital-archive.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "weekly",
       "priority": "0.8"
     },
     {
       "url": "https://beaumontarchives.co.uk/collection-services.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "monthly",
       "priority": "0.8"
     },
     {
       "url": "https://beaumontarchives.co.uk/material-search.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "monthly",
       "priority": "0.7"
     },
     {
       "url": "https://beaumontarchives.co.uk/about.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "monthly",
       "priority": "0.7"
     },
     {
       "url": "https://beaumontarchives.co.uk/contact.html",
-      "lastmod": "2026-06-06",
+      "lastmod": "2026-06-07",
       "changefreq": "monthly",
       "priority": "0.6"
     },
