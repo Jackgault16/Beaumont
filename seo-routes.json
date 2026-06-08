@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-08T16:18:39.423Z",
+  "generated_at": "2026-06-08T19:35:09.275Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
@@ -48,6 +48,12 @@
       "lastmod": "2026-06-08",
       "changefreq": "monthly",
       "priority": "0.6"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/catalogue/personal-narrative-of-a-pilgrimage-to-al-madinah-and-meccah-2-volumes-complete/",
+      "lastmod": "2026-06-08",
+      "changefreq": "weekly",
+      "priority": "0.8"
     },
     {
       "url": "https://beaumontarchives.co.uk/catalogue/the-irish-guards-in-the-great-war-2-volumes-complete/",
