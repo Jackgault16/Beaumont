@@ -174,4 +174,10 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://beaumontarchives.co.uk/pdf-vault/survivors-case-studies-in-the-rescue-and-preservation-of-rare-books/</loc>
+    <lastmod>2026-06-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

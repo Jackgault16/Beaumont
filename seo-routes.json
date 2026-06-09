@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-09T12:15:24.990Z",
+  "generated_at": "2026-06-09T15:28:19.077Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
@@ -172,6 +172,12 @@
     {
       "url": "https://beaumontarchives.co.uk/articles/approaching-an-estate-library-review/",
       "lastmod": "2026-06-04",
+      "changefreq": "monthly",
+      "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/pdf-vault/survivors-case-studies-in-the-rescue-and-preservation-of-rare-books/",
+      "lastmod": "2026-06-09",
       "changefreq": "monthly",
       "priority": "0.7"
     }
