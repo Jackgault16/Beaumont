@@ -10,6 +10,14 @@ function read(file) {
   return fs.readFileSync(path.join(root, file), 'utf8');
 }
 
+function readJson(file) {
+  try {
+    return JSON.parse(read(file));
+  } catch {
+    return null;
+  }
+}
+
 function write(file, content) {
   const target = path.join(root, file);
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -245,6 +253,14 @@ function modified(row) {
   return new Date(row.updated_at || row.created_at || row.article_date || Date.now()).toISOString().slice(0, 10);
 }
 
+function generatedAt(routes) {
+  const previous = readJson('seo-routes.json');
+  if (previous && JSON.stringify(previous.routes) === JSON.stringify(routes)) {
+    return previous.generated_at || new Date().toISOString();
+  }
+  return new Date().toISOString();
+}
+
 async function main() {
   const today = new Date().toISOString().slice(0, 10);
   const [items, articles, archiveItems] = await Promise.all([
@@ -326,7 +342,7 @@ Allow: /
 Sitemap: ${absolute('/sitemap.xml')}
 `);
 
-  write('seo-routes.json', `${JSON.stringify({ generated_at: new Date().toISOString(), routes }, null, 2)}\n`);
+  write('seo-routes.json', `${JSON.stringify({ generated_at: generatedAt(routes), routes }, null, 2)}\n`);
   console.log(`Generated ${routes.length} sitemap URLs, ${items.length} catalogue records, ${articles.length} articles and ${archiveItems.length} PDF Vault entries.`);
 }
 

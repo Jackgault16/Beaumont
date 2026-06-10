@@ -12,23 +12,28 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: generate-seo-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate-seo:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
+          package-manager-cache: false
 
       - name: Generate sitemap and clean routes
         run: node scripts/generate-seo.js
 
       - name: Commit generated SEO files
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: Generate SEO sitemap and clean routes
           file_pattern: sitemap.xml robots.txt seo-routes.json catalogue articles pdf-vault
