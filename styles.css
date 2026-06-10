@@ -7333,6 +7333,15 @@ body.admin-page {
   color: rgba(20, 35, 28, 0.72) !important;
 }
 
+.admin-page .enquiry-card__body dt {
+  color: #7d5d22 !important;
+}
+
+.admin-page .enquiry-card__body dd,
+.admin-page .enquiry-card__body dd a {
+  color: #14231c !important;
+}
+
 .admin-page input,
 .admin-page select,
 .admin-page textarea {
