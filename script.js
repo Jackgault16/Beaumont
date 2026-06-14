@@ -2,6 +2,7 @@
 const SITE_URL = 'https://beaumontarchives.co.uk';
 const SITE_NAME = 'Beaumont Archives';
 const DEFAULT_SHARE_IMAGE = `${SITE_URL}/og-image.jpg`;
+const SITE_LOGO = `${SITE_URL}/favicon-512.png`;
 const ADMIN_USERNAME = 'admin';
 const DEFAULT_CATEGORIES = ['Books', 'Maps', 'Documents', 'Historical Objects'];
 const DEFAULT_TAGS = [
@@ -640,6 +641,8 @@ function organizationSchema() {
     '@type': ['Organization', 'LocalBusiness'],
     name: SITE_NAME,
     url: SITE_URL,
+    logo: SITE_LOGO,
+    image: SITE_LOGO,
     email: 'jackgault16@yahoo.co.uk',
     telephone: '07549 892003',
     description: 'Rare books, historical maps, military history, manuscripts and historical material curated for collectors, historians and institutions.',

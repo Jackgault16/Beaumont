@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, '..');
 const siteUrl = 'https://beaumontarchives.co.uk';
 const siteName = 'Beaumont Archives';
 const defaultImage = `${siteUrl}/og-image.jpg`;
+const siteLogo = `${siteUrl}/favicon-512.png`;
 
 function read(file) {
   return fs.readFileSync(path.join(root, file), 'utf8');
@@ -196,6 +197,7 @@ function itemSchema(item, canonical, image, description) {
     bookEdition: edition || undefined,
     author: author ? { '@type': 'Person', name: author } : undefined,
     publisher: publisher ? { '@type': 'Organization', name: publisher } : undefined,
+    brand: { '@type': 'Organization', name: siteName, logo: siteLogo },
     locationCreated: publicationPlace ? { '@type': 'Place', name: publicationPlace } : undefined,
     itemCondition: itemConditionSchema(item),
     additionalProperty: [
@@ -325,7 +327,7 @@ async function main() {
       datePublished: article.article_date || undefined,
       dateModified: article.updated_at || article.article_date || undefined,
       author: { '@type': 'Organization', name: siteName },
-      publisher: { '@type': 'Organization', name: siteName },
+      publisher: { '@type': 'Organization', name: siteName, logo: siteLogo },
       mainEntityOfPage: canonical,
     }];
     write(path.join(route.slice(1), 'index.html'), routePage('journal.html', article.id, `${article.title} | ${siteName}`, description, canonical, image, schema));
