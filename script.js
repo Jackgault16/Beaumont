@@ -1400,7 +1400,7 @@ async function initCataloguePage() {
     }
     const params = new URLSearchParams(window.location.search);
     const itemId = params.get('item') || window.BEAUMONT_ROUTE_ID;
-    const itemSlug = routeSlug('catalogue');
+    const itemSlug = params.get('slug') || routeSlug('catalogue');
     if (itemId || itemSlug) {
       const item = findItemById(itemId)
         || state.items.find((entry) => slugify(entry.title || entry.reference_number || entry.id) === itemSlug)
@@ -2074,8 +2074,9 @@ async function initDigitalArchiveDetailPage() {
   try {
     if (!getClient()) throw new Error(supabaseRequiredMessage());
     await loadArchiveItems(false);
-    const id = new URLSearchParams(window.location.search).get('id') || window.BEAUMONT_ROUTE_ID;
-    const itemSlug = routeSlug('pdf-vault');
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id') || window.BEAUMONT_ROUTE_ID;
+    const itemSlug = params.get('slug') || routeSlug('pdf-vault');
     const item = state.archiveItems.find((entry) => sameRecordId(entry.id, id) || slugify(entry.title || entry.id) === itemSlug);
     if (!item) {
       detail.innerHTML = '<div class="catalogue-empty"><p>This Digital Archive item is not currently available.</p></div>';
@@ -2350,7 +2351,7 @@ async function initJournalPage() {
   await loadArticles(false);
   const params = new URLSearchParams(window.location.search);
   const articleId = params.get('article') || window.BEAUMONT_ROUTE_ID;
-  const articleSlug = routeSlug('articles');
+  const articleSlug = params.get('slug') || routeSlug('articles');
   if (articleId || articleSlug) {
     const article = state.articles.find((entry) => String(entry.id) === articleId || slugify(entry.title || entry.id) === articleSlug)
       || SAMPLE_ARTICLES.find((entry) => entry.id === articleId || slugify(entry.title || entry.id) === articleSlug);

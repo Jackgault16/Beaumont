@@ -9,7 +9,8 @@
       (function () {
         var path = window.location.pathname;
         var base = path.indexOf('/Beaumont/') === 0 ? '/Beaumont' : '';
-        var file = path.split('/').filter(Boolean).pop() || '';
+        var parts = path.replace(/^\/Beaumont\//, '/').split('/').filter(Boolean);
+        var file = parts[parts.length - 1] || '';
         var knownFiles = {
           'admin-login.html': true,
           'admin.html': true,
@@ -23,6 +24,17 @@
         };
         if (knownFiles[file]) {
           window.location.replace(base + '/' + file + window.location.search + window.location.hash);
+          return;
+        }
+        var cleanRoutes = {
+          catalogue: 'catalogue.html',
+          articles: 'journal.html',
+          'pdf-vault': 'digital-archive-item.html'
+        };
+        if (parts.length >= 2 && cleanRoutes[parts[0]]) {
+          var query = new URLSearchParams(window.location.search);
+          query.set('slug', parts[1]);
+          window.location.replace(base + '/' + cleanRoutes[parts[0]] + '?' + query.toString() + window.location.hash);
         }
       }());
     </script>
@@ -33,6 +45,6 @@
     <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
-    <p>Page not found. <a href="/index.html">Return to Beaumont Archives</a>.</p>
+    <p>Page not found. <a href="/">Return to Beaumont Archives</a>.</p>
   </body>
 </html>
