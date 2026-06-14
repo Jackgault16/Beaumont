@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-14T11:31:24.922Z",
+  "generated_at": "2026-06-14T11:53:30.349Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
@@ -42,6 +42,30 @@
       "lastmod": "2026-06-14",
       "changefreq": "monthly",
       "priority": "0.7"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/shipping-delivery/",
+      "lastmod": "2026-06-14",
+      "changefreq": "monthly",
+      "priority": "0.5"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/returns-refunds/",
+      "lastmod": "2026-06-14",
+      "changefreq": "monthly",
+      "priority": "0.5"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/terms-of-sale/",
+      "lastmod": "2026-06-14",
+      "changefreq": "monthly",
+      "priority": "0.5"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/privacy-policy/",
+      "lastmod": "2026-06-14",
+      "changefreq": "yearly",
+      "priority": "0.4"
     },
     {
       "url": "https://beaumontarchives.co.uk/catalogue/the-somme-1916-iii-corps-attack-on-1-july-la-boisselle-and-ovillers/",

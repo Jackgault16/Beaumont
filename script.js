@@ -810,12 +810,26 @@ function catalogueCardBibliographicLine(item) {
 }
 
 function itemConditionSchema(item) {
+  if (isReproductionPrint(item)) return 'https://schema.org/NewCondition';
   const condition = cleanText(item.condition).toLowerCase();
   if (!condition) return undefined;
   if (condition.includes('new')) return 'https://schema.org/NewCondition';
   if (condition.includes('damaged')) return 'https://schema.org/DamagedCondition';
   if (condition.includes('used') || condition.includes('good') || condition.includes('fine') || condition.includes('very')) return 'https://schema.org/UsedCondition';
   return 'https://schema.org/UsedCondition';
+}
+
+function isReproductionPrint(item) {
+  const text = [
+    item.title,
+    item.category,
+    catalogueDescription(item),
+    item.short_description,
+    item.full_description,
+    item.physical_details,
+    itemTags(item).join(' '),
+  ].join(' ').toLowerCase();
+  return /\breproduction\b|\bmodern print\b|\breproduction print\b|\bfacsimile\b/.test(text);
 }
 
 function itemSchema(item) {
@@ -842,6 +856,7 @@ function itemSchema(item) {
     bookEdition: edition || undefined,
     author: author ? { '@type': 'Person', name: author } : undefined,
     publisher: publisher ? { '@type': 'Organization', name: publisher } : undefined,
+    brand: { '@type': 'Organization', name: SITE_NAME, logo: SITE_LOGO },
     locationCreated: publicationPlace ? { '@type': 'Place', name: publicationPlace } : undefined,
     itemCondition: itemConditionSchema(item),
     additionalProperty: [
@@ -864,6 +879,15 @@ function itemSchema(item) {
       itemCondition: itemConditionSchema(item),
       sku: item.reference_number || item.id,
       url,
+      seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'GB',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 14,
+        returnMethod: 'https://schema.org/ReturnByMail',
+        returnFees: 'https://schema.org/ReturnShippingFees',
+      },
     },
   };
 }
@@ -1276,6 +1300,7 @@ function renderItemDetail(item) {
     ],
   });
   const sections = [
+    isReproductionPrint(item) ? { title: 'Reproduction Notice', body: '<p>This item is offered as a modern reproduction print and not as an original map or document.</p>' } : null,
     description ? { title: 'Catalogue Description', body: markdownToHtml(description) } : null,
     physicalDetails ? { title: 'Physical Details', body: `<p>${escapeHtml(physicalDetails)}</p>` } : null,
     condition ? { title: 'Condition', body: `<p>${escapeHtml(condition)}</p>` } : null,

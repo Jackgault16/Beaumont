@@ -166,7 +166,21 @@ function itemPublicationPlace(item) {
     || labelledItemValue(item, ['publication place', 'place of publication', 'published at']);
 }
 
+function isReproductionPrint(item) {
+  const text = [
+    item.title,
+    item.category,
+    item.catalogue_description,
+    item.short_description,
+    item.full_description,
+    item.physical_details,
+    item.item_tags?.map((entry) => entry.tags?.name).join(' '),
+  ].join(' ').toLowerCase();
+  return /\breproduction\b|\bmodern print\b|\breproduction print\b|\bfacsimile\b/.test(text);
+}
+
 function itemConditionSchema(item) {
+  if (isReproductionPrint(item)) return 'https://schema.org/NewCondition';
   const condition = cleanText(item.condition).toLowerCase();
   if (!condition) return undefined;
   if (condition.includes('new')) return 'https://schema.org/NewCondition';
@@ -220,6 +234,15 @@ function itemSchema(item, canonical, image, description) {
       itemCondition: itemConditionSchema(item),
       sku: item.reference_number || item.id,
       url: canonical,
+      seller: { '@type': 'Organization', name: siteName, url: siteUrl },
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'GB',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 14,
+        returnMethod: 'https://schema.org/ReturnByMail',
+        returnFees: 'https://schema.org/ReturnShippingFees',
+      },
     },
   };
 }
@@ -300,6 +323,10 @@ async function main() {
     { url: absolute('/collection-services.html'), lastmod: today, changefreq: 'monthly', priority: '0.8' },
     { url: absolute('/material-search.html'), lastmod: today, changefreq: 'monthly', priority: '0.7' },
     { url: absolute('/about.html'), lastmod: today, changefreq: 'monthly', priority: '0.7' },
+    { url: absolute('/shipping-delivery/'), lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { url: absolute('/returns-refunds/'), lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { url: absolute('/terms-of-sale/'), lastmod: today, changefreq: 'monthly', priority: '0.5' },
+    { url: absolute('/privacy-policy/'), lastmod: today, changefreq: 'yearly', priority: '0.4' },
   ];
 
   items.filter((item) => !item.archive_reference).forEach((item) => {

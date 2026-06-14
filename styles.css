@@ -9253,3 +9253,36 @@ body .page-shell > main .journal-entry__summary {
     flex-basis: 100%;
   }
 }
+
+.policy-summary__content,
+.policy-page {
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.policy-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.policy-link-row a {
+  border: 1px solid rgba(155, 119, 50, 0.32);
+  color: #0f3b31;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+}
+
+.policy-link-row a:hover,
+.policy-link-row a:focus-visible {
+  background: rgba(184, 155, 94, 0.16);
+  color: #0a241d;
+}
+
+.policy-page-hero .about-hero__content {
+  max-width: 760px;
+}
