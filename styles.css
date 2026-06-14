@@ -9320,3 +9320,80 @@ body .page-shell > main .journal-entry__summary {
 .cookie-consent .button {
   min-height: 2.45rem;
 }
+
+/* Compact footer: content-sized only, no viewport stretching. */
+.site-footer,
+.page-shell > .site-footer {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 0 0 auto !important;
+  flex-grow: 0 !important;
+  align-self: stretch;
+  margin-top: clamp(2rem, 4vw, 3rem) !important;
+  margin-bottom: 0 !important;
+  padding-top: clamp(3rem, 4vw, 4rem) !important;
+  padding-bottom: clamp(3rem, 4vw, 4rem) !important;
+  background-color: #082b22 !important;
+}
+
+.site-footer > .footer-top {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.65fr) minmax(240px, 1fr) !important;
+  align-items: start !important;
+  gap: clamp(1.5rem, 4vw, 3rem) !important;
+  padding-bottom: clamp(1.25rem, 2vw, 1.75rem) !important;
+}
+
+.site-footer > .footer-top > .footer-column {
+  align-self: start !important;
+}
+
+.site-footer > .footer-top > .footer-column:nth-child(1),
+.site-footer > .footer-top > .footer-column:nth-child(2),
+.site-footer > .footer-top > .footer-column:nth-child(3) {
+  justify-self: start !important;
+}
+
+.site-footer > .footer-top::after {
+  display: none !important;
+}
+
+.site-footer .footer-column h4 {
+  margin-bottom: 0.8rem !important;
+}
+
+.site-footer .footer-column p,
+.site-footer .footer-column a {
+  line-height: 1.65 !important;
+}
+
+.site-footer > .footer-bottom {
+  margin-top: clamp(1.25rem, 2vw, 1.75rem) !important;
+  padding-top: 1rem !important;
+  border-top: 1px solid rgba(184, 155, 94, 0.22) !important;
+  color: rgba(244, 236, 220, 0.72) !important;
+  font-size: 0.92rem !important;
+}
+
+.site-footer > .footer-bottom p {
+  margin: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .site-footer,
+  .page-shell > .site-footer {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+
+  .site-footer > .footer-top {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+    padding-bottom: 1.1rem !important;
+  }
+
+  .site-footer > .footer-bottom {
+    margin-top: 1.1rem !important;
+  }
+}
