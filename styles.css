@@ -9335,7 +9335,7 @@ body .page-shell > main .journal-entry__summary {
   margin-bottom: 0 !important;
   padding: 40px 48px 20px !important;
   background-color: #082b22 !important;
-  border-top: 0 !important;
+  border-top: 1px solid rgba(230, 214, 180, 0.18) !important;
 }
 
 .site-footer > .footer-top {
