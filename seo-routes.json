@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-14T00:20:01.564Z",
+  "generated_at": "2026-06-14T11:05:35.249Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
@@ -42,12 +42,6 @@
       "lastmod": "2026-06-14",
       "changefreq": "monthly",
       "priority": "0.7"
-    },
-    {
-      "url": "https://beaumontarchives.co.uk/contact.html",
-      "lastmod": "2026-06-14",
-      "changefreq": "monthly",
-      "priority": "0.6"
     },
     {
       "url": "https://beaumontarchives.co.uk/catalogue/personal-narrative-of-a-pilgrimage-to-al-madinah-and-meccah-2-volumes-complete/",

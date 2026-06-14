@@ -1148,7 +1148,7 @@ function renderFeaturedCarousel(items) {
 }
 
 function enquiryUrl(item) {
-  return localPath(`index.html?ref=${encodeURIComponent(item.reference_number || item.title || '')}#contact`);
+  return `/?ref=${encodeURIComponent(item.reference_number || item.title || '')}#contact`;
 }
 
 async function initHomepageInventory() {

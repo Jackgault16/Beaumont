@@ -24,6 +24,24 @@ function write(file, content) {
   fs.writeFileSync(target, content);
 }
 
+function cleanGeneratedDirectories(validRoutes) {
+  const ownedDirs = ['catalogue', 'articles', 'pdf-vault'];
+  const valid = new Set(validRoutes.map((route) => route.replace(/\/$/, '')));
+  ownedDirs.forEach((dir) => {
+    const base = path.join(root, dir);
+    if (!fs.existsSync(base)) return;
+    fs.readdirSync(base, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .forEach((entry) => {
+        const relative = `${dir}/${entry.name}`;
+        const indexFile = path.join(base, entry.name, 'index.html');
+        if (fs.existsSync(indexFile) && !valid.has(relative)) {
+          fs.rmSync(path.join(base, entry.name), { recursive: true, force: true });
+        }
+      });
+  });
+}
+
 function escapeXml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -210,14 +228,17 @@ function routePage(templateFile, routeId, title, description, canonical, image, 
     .replace(/href="styles\.css[^"]*"/g, `href="${prefix}styles.css?v=20260604-editor-fix"`)
     .replace(/src="supabase\.js"/g, `src="${prefix}supabase.js"`)
     .replace(/src="script\.js[^"]*"/g, `src="${prefix}script.js?v=20260604-editor-fix"`)
-    .replace(/href="index\.html/g, `href="${prefix}index.html`)
-    .replace(/href="catalogue\.html/g, `href="${prefix}catalogue.html`)
-    .replace(/href="collection-services\.html/g, `href="${prefix}collection-services.html`)
-    .replace(/href="about\.html/g, `href="${prefix}about.html`)
-    .replace(/href="journal\.html/g, `href="${prefix}journal.html`)
-    .replace(/href="digital-archive\.html/g, `href="${prefix}digital-archive.html`)
-    .replace(/href="admin-login\.html/g, `href="${prefix}admin-login.html`)
-    .replace(/href="admin\.html/g, `href="${prefix}admin.html`);
+    .replace(/href="index\.html/g, 'href="/')
+    .replace(/href="catalogue\.html/g, 'href="/catalogue.html')
+    .replace(/href="collection-services\.html/g, 'href="/collection-services.html')
+    .replace(/href="about\.html/g, 'href="/about.html')
+    .replace(/href="journal\.html/g, 'href="/journal.html')
+    .replace(/href="digital-archive\.html/g, 'href="/digital-archive.html')
+    .replace(/href="admin-login\.html/g, 'href="/admin-login.html')
+    .replace(/href="admin\.html/g, 'href="/admin.html')
+    .replace(/\s*<meta name="description" content="[^"]*" \/>\r?\n?/g, '\n')
+    .replace(/\s*<link rel="canonical" href="[^"]*" \/>\r?\n?/g, '\n')
+    .replace(/\s*<meta name="robots" content="noindex, follow" \/>\r?\n?/, '\n');
 
   const headTags = `
     <meta name="description" content="${escapeHtml(description)}" />
@@ -277,7 +298,6 @@ async function main() {
     { url: absolute('/collection-services.html'), lastmod: today, changefreq: 'monthly', priority: '0.8' },
     { url: absolute('/material-search.html'), lastmod: today, changefreq: 'monthly', priority: '0.7' },
     { url: absolute('/about.html'), lastmod: today, changefreq: 'monthly', priority: '0.7' },
-    { url: absolute('/contact.html'), lastmod: today, changefreq: 'monthly', priority: '0.6' },
   ];
 
   items.filter((item) => !item.archive_reference).forEach((item) => {
@@ -329,6 +349,10 @@ async function main() {
     write(path.join(route.slice(1), 'index.html'), routePage('digital-archive-item.html', item.id, `${item.title} | ${siteName}`, description, canonical, image, schema));
     routes.push({ url: canonical, lastmod: modified(item), changefreq: 'monthly', priority: '0.7' });
   });
+
+  cleanGeneratedDirectories(routes
+    .map((route) => new URL(route.url).pathname.slice(1))
+    .filter((route) => route.includes('/')));
 
   write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
