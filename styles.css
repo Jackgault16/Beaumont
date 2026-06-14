@@ -9329,30 +9329,43 @@ body .page-shell > main .journal-entry__summary {
   max-height: none !important;
   flex: 0 0 auto !important;
   flex-grow: 0 !important;
-  align-self: stretch;
-  margin-top: clamp(2rem, 4vw, 3rem) !important;
+  align-self: stretch !important;
+  justify-content: flex-start !important;
+  margin-top: 0 !important;
   margin-bottom: 0 !important;
-  padding-top: clamp(3rem, 4vw, 4rem) !important;
-  padding-bottom: clamp(3rem, 4vw, 4rem) !important;
+  padding: 40px 48px 20px !important;
   background-color: #082b22 !important;
+  border-top: 0 !important;
 }
 
 .site-footer > .footer-top {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.65fr) minmax(240px, 1fr) !important;
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  grid-template-columns: 1fr 1fr auto !important;
   align-items: start !important;
-  gap: clamp(1.5rem, 4vw, 3rem) !important;
-  padding-bottom: clamp(1.25rem, 2vw, 1.75rem) !important;
+  gap: 48px !important;
+  padding-bottom: 0 !important;
+  border-bottom: 0 !important;
 }
 
 .site-footer > .footer-top > .footer-column {
   align-self: start !important;
+  min-width: 0 !important;
 }
 
-.site-footer > .footer-top > .footer-column:nth-child(1),
-.site-footer > .footer-top > .footer-column:nth-child(2),
-.site-footer > .footer-top > .footer-column:nth-child(3) {
+.site-footer > .footer-top > .footer-column:nth-child(1) {
   justify-self: start !important;
+}
+
+.site-footer > .footer-top > .footer-column:nth-child(2) {
+  justify-self: center !important;
+}
+
+.site-footer > .footer-top > .footer-column:nth-child(3) {
+  justify-self: end !important;
+  text-align: left !important;
 }
 
 .site-footer > .footer-top::after {
@@ -9360,20 +9373,40 @@ body .page-shell > main .journal-entry__summary {
 }
 
 .site-footer .footer-column h4 {
-  margin-bottom: 0.8rem !important;
+  margin-bottom: 10px !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
 }
 
 .site-footer .footer-column p,
 .site-footer .footer-column a {
-  line-height: 1.65 !important;
+  font-size: 14px !important;
+  line-height: 1.25 !important;
+}
+
+.site-footer .footer-column a {
+  display: inline-block !important;
+  margin-bottom: 6px !important;
+}
+
+.site-footer > .footer-top > .footer-column:nth-child(3) {
+  column-count: 2 !important;
+  column-gap: 28px !important;
+}
+
+.site-footer > .footer-top > .footer-column:nth-child(3) h4 {
+  column-span: all !important;
 }
 
 .site-footer > .footer-bottom {
-  margin-top: clamp(1.25rem, 2vw, 1.75rem) !important;
-  padding-top: 1rem !important;
-  border-top: 1px solid rgba(184, 155, 94, 0.22) !important;
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin: 32px auto 0 !important;
+  padding-top: 12px !important;
+  border-top: 1px solid rgba(230, 214, 180, 0.18) !important;
   color: rgba(244, 236, 220, 0.72) !important;
-  font-size: 0.92rem !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
 }
 
 .site-footer > .footer-bottom p {
@@ -9383,17 +9416,23 @@ body .page-shell > main .journal-entry__summary {
 @media (max-width: 760px) {
   .site-footer,
   .page-shell > .site-footer {
-    padding-top: 3rem !important;
-    padding-bottom: 3rem !important;
+    padding: 32px 24px 20px !important;
   }
 
   .site-footer > .footer-top {
     grid-template-columns: 1fr !important;
     gap: 1.25rem !important;
-    padding-bottom: 1.1rem !important;
+  }
+
+  .site-footer > .footer-top > .footer-column:nth-child(1),
+  .site-footer > .footer-top > .footer-column:nth-child(2),
+  .site-footer > .footer-top > .footer-column:nth-child(3) {
+    justify-self: start !important;
+    text-align: left !important;
+    column-count: 1 !important;
   }
 
   .site-footer > .footer-bottom {
-    margin-top: 1.1rem !important;
+    margin-top: 24px !important;
   }
 }
