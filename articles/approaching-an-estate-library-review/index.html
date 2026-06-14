@@ -1,7 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QZS40Z4BNS"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      var beaumontAnalyticsConsent = 'denied';
+      try {
+        beaumontAnalyticsConsent = localStorage.getItem('beaumont_cookie_consent') === 'accepted' ? 'granted' : 'denied';
+      } catch (error) {}
+      gtag('consent', 'default', {
+        analytics_storage: beaumontAnalyticsConsent
+      });
+      gtag('js', new Date());
+
+      gtag('config', 'G-QZS40Z4BNS');
+    </script>    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Approaching an Estate Library Review | Beaumont Archives</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -45,6 +60,7 @@
             <a href="/returns-refunds/">Returns &amp; Refunds</a><br />
             <a href="/terms-of-sale/">Terms of Sale</a><br />
             <a href="/privacy-policy/">Privacy Policy</a><br />
+            <a href="/cookie-policy/">Cookie Policy</a><br />
             <a class="footer-admin-link" href="/admin-login.html">Admin Login</a></div></div><div class="footer-bottom"><p>&copy; 2026 Beaumont. All Rights Reserved.</p></div></footer>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../../supabase.js"></script><script src="../../script.js?v=20260604-editor-fix"></script>

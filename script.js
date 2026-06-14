@@ -3655,6 +3655,64 @@ function alignInitialContactHash() {
   window.addEventListener('load', align, { once: true });
 }
 
+const COOKIE_CONSENT_KEY = 'beaumont_cookie_consent';
+
+function storedCookieConsent() {
+  try {
+    return localStorage.getItem(COOKIE_CONSENT_KEY);
+  } catch (error) {
+    return null;
+  }
+}
+
+function storeCookieConsent(value) {
+  try {
+    localStorage.setItem(COOKIE_CONSENT_KEY, value);
+  } catch (error) {}
+}
+
+function updateAnalyticsConsent(value) {
+  if (typeof window.gtag !== 'function') return;
+  window.gtag('consent', 'update', {
+    analytics_storage: value === 'accepted' ? 'granted' : 'denied',
+  });
+}
+
+function initCookieConsentBanner() {
+  if (document.body.classList.contains('admin-page')) return;
+  const existing = storedCookieConsent();
+  if (existing) {
+    updateAnalyticsConsent(existing);
+    return;
+  }
+  if (document.querySelector('[data-cookie-consent]')) return;
+
+  const banner = document.createElement('section');
+  banner.className = 'cookie-consent';
+  banner.setAttribute('data-cookie-consent', '');
+  banner.setAttribute('aria-label', 'Cookie consent');
+  banner.innerHTML = `
+    <p>Beaumont Archives uses cookies to improve website performance, analyse visitor traffic and provide essential site functionality.</p>
+    <div class="cookie-consent__actions">
+      <button type="button" class="button button--primary" data-cookie-accept>Accept</button>
+      <button type="button" class="button button--ghost" data-cookie-reject>Reject Non-Essential Cookies</button>
+      <a href="/cookie-policy/">Cookie Policy</a>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  banner.querySelector('[data-cookie-accept]')?.addEventListener('click', () => {
+    storeCookieConsent('accepted');
+    updateAnalyticsConsent('accepted');
+    banner.remove();
+  });
+  banner.querySelector('[data-cookie-reject]')?.addEventListener('click', () => {
+    storeCookieConsent('rejected');
+    updateAnalyticsConsent('rejected');
+    banner.remove();
+  });
+}
+
 initHomepageInventory();
 initCataloguePage();
 initDigitalArchivePage();
@@ -3665,5 +3723,6 @@ initAdminPage();
 initBaseSeo();
 prefillContactReference();
 alignInitialContactHash();
+initCookieConsentBanner();
 
 

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-14T11:53:30.349Z",
+  "generated_at": "2026-06-14T11:57:57.396Z",
   "routes": [
     {
       "url": "https://beaumontarchives.co.uk/",
@@ -63,6 +63,12 @@
     },
     {
       "url": "https://beaumontarchives.co.uk/privacy-policy/",
+      "lastmod": "2026-06-14",
+      "changefreq": "yearly",
+      "priority": "0.4"
+    },
+    {
+      "url": "https://beaumontarchives.co.uk/cookie-policy/",
       "lastmod": "2026-06-14",
       "changefreq": "yearly",
       "priority": "0.4"

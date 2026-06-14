@@ -327,6 +327,7 @@ async function main() {
     { url: absolute('/returns-refunds/'), lastmod: today, changefreq: 'monthly', priority: '0.5' },
     { url: absolute('/terms-of-sale/'), lastmod: today, changefreq: 'monthly', priority: '0.5' },
     { url: absolute('/privacy-policy/'), lastmod: today, changefreq: 'yearly', priority: '0.4' },
+    { url: absolute('/cookie-policy/'), lastmod: today, changefreq: 'yearly', priority: '0.4' },
   ];
 
   items.filter((item) => !item.archive_reference).forEach((item) => {

@@ -1,7 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QZS40Z4BNS"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      var beaumontAnalyticsConsent = 'denied';
+      try {
+        beaumontAnalyticsConsent = localStorage.getItem('beaumont_cookie_consent') === 'accepted' ? 'granted' : 'denied';
+      } catch (error) {}
+      gtag('consent', 'default', {
+        analytics_storage: beaumontAnalyticsConsent
+      });
+      gtag('js', new Date());
+
+      gtag('config', 'G-QZS40Z4BNS');
+    </script>    <meta charset="UTF-8" />
     <meta name="robots" content="noindex, follow" />
     <meta http-equiv="refresh" content="0; url=/#contact" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
